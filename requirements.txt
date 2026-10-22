@@ -1,0 +1,7 @@
+# Packages the scripts of The Data Application need (installed into the project's venv by the application).
+# New steps add their packages here; the Settings tab offers "Install the missing packages" for a project whose venv lacks one.
+pandas>=2.0          # cleaning and every table
+matplotlib>=3.7      # the plots
+numpy>=1.24          # arithmetic of the plots (the world map)
+openpyxl>=3.1        # reading and writing Excel files
+pillow>=10.0         # images (comparison of plots)

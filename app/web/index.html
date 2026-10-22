@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Data Application</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <h1>The Data Application</h1>
+  <span id="proj-badge" class="badge hidden"></span>
+  <div class="tools">
+    <button id="switch" class="hidden" title="Close this project and go back to the project list">Switch project</button>
+    <button id="font-down" title="Smaller text" aria-label="Smaller text">A&minus;</button>
+    <button id="font-up" title="Larger text" aria-label="Larger text">A+</button>
+    <button id="theme" title="Light / dark">Light / dark</button>
+    <button id="quit" class="danger" title="Close the application">Quit</button>
+  </div>
+</header>
+
+<!-- ============================================================ opening screen: create or open a project -->
+<main id="welcome" class="hidden">
+  <p class="lead">Every analysis lives in a <b>project</b>: a folder that <b>you choose</b>, with its own settings (Python environment, main data) and its own results. Create a new project or open one you already have.</p>
+
+  <section class="card">
+    <div class="head"><h2>Create a new project</h2></div>
+    <div class="row">
+      <input type="text" id="new-name" placeholder="Project name, for example: Water monitoring 2016-2025" aria-label="Project name" maxlength="80">
+    </div>
+    <div class="row">
+      <input type="text" id="new-loc" placeholder="Folder in which the project is saved" aria-label="Folder in which the project is saved">
+      <button id="loc-browse">Choose folder&hellip;</button>
+    </div>
+    <div class="info" id="new-where"></div>
+    <div class="row"><button id="create" class="primary">Create project</button></div>
+    <div id="create-msg" class="msg"></div>
+  </section>
+
+  <section class="card">
+    <div class="head"><h2>Open an existing project</h2></div>
+    <div id="project-list"></div>
+    <div id="open-msg" class="msg"></div>
+    <h3>A project that is not in the list</h3>
+    <div class="row">
+      <input type="text" id="add-path" placeholder="Folder of the project (it contains project.json)" aria-label="Folder of an existing project">
+      <button id="add-browse">Choose folder&hellip;</button>
+      <button id="add-go">Open this folder</button>
+    </div>
+  </section>
+</main>
+
+<!-- ============================================================ a project is open: left sidebar + pages -->
+<div id="workspace" class="layout hidden">
+  <aside id="sidebar" aria-label="Menu">
+    <button id="sb-toggle" class="sb-toggle" title="Hide or show the menu" aria-label="Hide or show the menu">&#9776; Menu</button>
+    <nav id="nav"></nav>
+  </aside>
+
+  <main id="content">
+    <!-- ---------------- page: overview -->
+    <section class="panel" id="page-overview">
+      <section class="card">
+        <div class="head"><h2>Overview of the project</h2></div>
+        <p>All tasks of the project. Open a task from the menu on the left, or generate everything here. A task needs the cleaned data (step 1); the tasks it needs are generated first.</p>
+        <div id="ov-notice" class="notice hidden"></div>
+        <div class="row">
+          <button id="ov-all" class="primary">Generate all data</button>
+          <button id="ov-plots">Generate all plots</button>
+        </div>
+        <div id="ov-msg" class="msg"></div>
+        <div class="table-wrap"><table id="ov-table"></table></div>
+      </section>
+    </section>
+
+    <!-- ---------------- page: settings (saved automatically, for this project only) -->
+    <section class="panel hidden" id="page-settings">
+      <p class="lead">These settings belong to this project only and are saved automatically.</p>
+
+      <section class="card">
+        <div class="head"><h2>Project</h2></div>
+        <div id="project-info" class="info"></div>
+        <div class="row"><button id="open-project">Show the project folder</button></div>
+      </section>
+
+      <section class="card">
+        <div class="head"><h2>Python environment</h2><span id="env-pill" class="pill">checking</span></div>
+        <p>The scripts run in a virtual environment (venv), so nothing is installed into your system Python.</p>
+        <div id="env-info" class="info"></div>
+        <div class="row"><button id="env-fix" class="primary hidden">Install the missing packages</button></div>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="env" value="create" checked> <span><b>Create a new venv</b> inside this project and install the packages <em>(recommended)</em></span></label>
+          <label class="choice"><input type="radio" name="env" value="use"> <span><b>Use a venv I already have</b></span></label>
+          <div id="use-box" class="row hidden">
+            <input type="text" id="venv-path" placeholder="Folder of your venv (it contains pyvenv.cfg)" aria-label="Folder of your venv">
+            <button id="browse">Browse&hellip;</button>
+          </div>
+          <label class="choice hidden" id="other-choice"><input type="radio" name="env" value="other"> <span><b>Use the venv of another project</b></span></label>
+          <div id="other-box" class="row hidden"><select id="other-venv" aria-label="Project whose venv to use"></select></div>
+        </div>
+        <div class="row">
+          <button id="env-go">Set up the environment</button>
+          <button id="env-install" class="hidden">Install the missing packages</button>
+        </div>
+        <div id="env-msg" class="msg"></div>
+      </section>
+
+      <section class="card">
+        <div class="head"><h2>Main data</h2><span id="data-pill" class="pill">none</span></div>
+        <p>Choose the Scopus export (CSV). A <b>copy</b> is kept in the project's <code>data/raw</code> folder; your original file is never changed.</p>
+        <div id="data-info" class="info"></div>
+        <div class="row">
+          <button id="choose" class="primary">Choose the Scopus CSV&hellip;</button>
+          <button id="open-raw">Show the folder</button>
+          <input type="file" id="file" accept=".csv,text/csv" class="hidden">
+        </div>
+        <div id="data-msg" class="msg"></div>
+      </section>
+    </section>
+
+    <!-- ---------------- page: step 1, clean data -->
+    <section class="panel hidden" id="page-clean">
+      <section class="card">
+        <div class="head"><h2>Step 1: Clean the data</h2><span id="clean-pill" class="pill">not done</span></div>
+        <p>Removes duplicates and records without authors, repairs damaged text, builds the country columns, and checks the result. Nothing is written if a check fails.
+           The results and a <b>log of the run</b> are saved automatically in the project's folder <code>01_Clean_Data</code>, ready for writing about it.</p>
+        <div id="clean-needs" class="notice hidden"></div>
+        <div id="clean-info" class="info"></div>
+        <div class="row">
+          <button id="clean" class="primary">Clean the data</button>
+          <a id="dl-csv" class="button hidden" href="/download/clean_main_data.csv">Download the cleaned CSV</a>
+          <a id="dl-report" class="button hidden" href="/download/clean_report.txt">Download the report</a>
+          <a id="dl-log" class="button hidden" href="/download/clean_log.txt">Download the log</a>
+          <button id="open-clean" class="hidden">Show the folder</button>
+        </div>
+        <div id="clean-msg" class="msg"></div>
+        <div id="result" class="hidden">
+          <h3>Report</h3>
+          <pre id="report"></pre>
+          <h3>First rows of the cleaned data <span id="preview-note"></span></h3>
+          <div class="table-wrap"><table id="preview"></table></div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ---------------- page: one sheet (filled by app.js) -->
+    <section class="panel hidden" id="page-sheet">
+      <section class="card">
+        <div class="head"><h2 id="sh-title"></h2><span id="sh-pill" class="pill"></span></div>
+        <p id="sh-what"></p>
+        <div id="sh-notice" class="notice hidden"></div>
+        <div id="sh-info" class="info"></div>
+        <div id="sh-options" class="notice hidden"></div>
+        <div class="row" id="sh-buttons">
+          <button id="sh-run" class="primary">Generate data</button>
+          <span id="sh-plot-buttons"></span>
+          <a id="sh-dl" class="button hidden" href="#">Download the CSV</a>
+          <a id="sh-dl-log" class="button hidden" href="#">Download the log</a>
+          <button id="sh-folder" class="hidden">Show the folder</button>
+        </div>
+        <div id="sh-msg" class="msg"></div>
+        <div id="sh-data" class="hidden">
+          <h3>Data <span id="sh-total"></span></h3>
+          <div class="row" id="sh-csvs"></div>
+          <div class="table-wrap"><table id="sh-table"></table></div>
+          <div class="row" id="sh-pager"></div>
+        </div>
+        <h3 id="sh-plots-title" class="hidden">Plots</h3>
+        <div id="sh-plots"></div>
+        <div id="sh-explain" class="explain hidden"></div>
+      </section>
+    </section>
+
+    <section class="card" id="log-card">
+      <div class="head"><h2>Activity</h2><span id="job-pill" class="pill">idle</span></div>
+      <pre id="log" aria-live="polite">Nothing running.</pre>
+    </section>
+  </main>
+</div>
+<footer id="folder"></footer>
+<script src="/app.js"></script>
+</body>
+</html>
