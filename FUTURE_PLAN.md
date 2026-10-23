@@ -30,3 +30,11 @@ Every task page shows a data table. Add a button "Table as picture" that writes 
 - Decide the default grouping. By cleaned name is strict (the many different SPIE conferences stay apart, so few reach 3 editions); by source title gives the longer list the user first expected.
 - The name cleaning is rule based and was checked only on the January data: on another export, read `Conferences.csv` for names that should have been merged.
 - Conference papers without a conference date cannot be placed in an edition and are left out (39 of the 135 had no Source title, but all had a conference date).
+
+## 3. Cluster label helper for CiteSpace country networks
+
+**Idea:** a task that reads CiteSpace's `network_summary_table.csv` and the cleaned data and writes, for every cluster, the member countries (non-country nodes left out), the number of papers, the mean year, the 8 author keywords that distinguish the cluster (log-odds against all other papers) and a strength of evidence (strong / medium / weak). The user reads the table and names the clusters; the name itself stays the user's decision.
+
+**Status:** the method was done by hand for the network in `Power_Query/Scientometric/Collaborating_Countries/`; the full description (why CiteSpace's own labels do not suit country networks, the steps, the evidence per cluster, the limits) is in `docs/cluster_labels_why_and_how.txt`. Not built.
+
+**To decide when we build it:** how the user hands over the CiteSpace file (file chooser in the window, like the main data), and whether the table should also be written as the `cluster_labels.tsv` format CiteSpace can load back.
