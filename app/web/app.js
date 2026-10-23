@@ -273,7 +273,7 @@ function renderSheet(name) {
   s.options = s.options || [];                      // an older server process sends no options
   $("sh-options").classList.toggle("hidden", !s.options.length);
   $("sh-options").innerHTML = s.options.length ? "<b>Your choices</b> (saved in this project until you change them)<br>" + s.options.map((o) => "<label>" + esc(o.label) + " " + (o.kind === "number" ?
-    '<input type="number" data-opt="' + esc(o.id) + '" min="' + o.min + '" max="' + o.max + '" value="' + o.value + '" style="width:5em">' :
+    '<input type="number" data-opt="' + esc(o.id) + '" min="' + o.min + '" max="' + o.max + '" step="' + (o.step || 1) + '" value="' + o.value + '" style="width:5em">' :
     '<input type="checkbox" data-opt="' + esc(o.id) + '"' + (o.value ? " checked" : "") + ">") + "</label>").join("<br>") + ' <span id="sh-opt-msg" class="msg"></span>' : "";
   document.querySelectorAll("#sh-options [data-opt]").forEach((el) => el.onchange = async () => {
     const values = {};
@@ -296,6 +296,7 @@ function renderSheet(name) {
   const first = s.csvs[0];
   $("sh-dl").classList.toggle("hidden", !first.exists);
   $("sh-dl").href = "/files/" + name + "/" + first.file + "?download=1";
+  $("sh-downloads").innerHTML = (s.downloads || []).filter((d) => d.exists).map((d) => '<a class="button" href="/files/' + esc(name) + "/" + esc(d.file) + '?download=1">' + esc(d.label) + "</a>").join(" ");
   $("sh-dl-log").classList.toggle("hidden", !s.log);
   $("sh-dl-log").href = "/files/" + name + "/" + name + "_log.txt?download=1";
   $("sh-folder").classList.toggle("hidden", !s.done);

@@ -30,10 +30,14 @@ _ROWS = [
       ("source_m_vs_year", "Scatter: m-index against first year", ["source_m_vs_year"])]),
     ("11_Sources_Over_Time", "Sources", "Sources over time", "Cumulative documents of the five most productive sources, and a timeline of the most productive sources.", [],
      [("sources_over_time", "Sources over time: cumulative lines (top 5)", ["sources_over_time"]), ("sources_timeline", "Sources over time: timeline (bubbles)", ["sources_timeline"])]),
+    ("Author_Bursts", "Authors", "Author bursts", "The authors with the strongest bursts of publication (CiteSpace-style burst history): table, plot and HTML page.", ["Authors"],
+     [("author_bursts", "Author bursts: strongest bursts of publication", ["author_bursts"])]),
     ("14_Author_Over_Time", "Authors", "Authors over time", "Papers per year of the ten most productive authors.", ["Authors", "Author_Summary"], [("authors_over_time", "Authors over time: heat map", ["authors_over_time"]),
       ("authors_timeline", "Authors over time: timeline (bubbles)", ["authors_timeline"])]),
     ("15_Lotka", "Authors", "Lotka's law", "How many authors wrote 1, 2, 3 ... papers.", ["Author_Summary"], [("lotka", "Lotka's law", ["lotka"])]),
     ("16_Author_Impact", "Authors", "Author impact", "The 20 authors with the highest h-index.", ["Author_Summary"], [("author_h_index", "Authors by h-index", ["author_h_index"])]),
+    ("Institution_Bursts", "Affiliations", "Institution bursts", "The institutions with the strongest bursts of publication (CiteSpace-style burst history): table, plot and HTML page.", ["Affiliations"],
+     [("institution_bursts", "Institution bursts: strongest bursts of publication", ["institution_bursts"])]),
     ("17_Top_Affiliations", "Affiliations", "Top affiliations", "The most productive institutions.", ["Affiliations"], [("top_affiliations", "Top affiliations", ["top_affiliations"])]),
     ("18_Affil_Over_Time", "Affiliations", "Affiliations over time", "Cumulative documents of the most productive institutions, and a timeline (bubbles) of the most productive institutions.", ["Affiliations"],
      [("affiliations_over_time", "Affiliations over time: cumulative lines (top 5)", ["affiliations_over_time"]), ("affiliations_timeline", "Affiliations over time: timeline (bubbles)", ["affiliations_timeline"])]),
@@ -44,6 +48,8 @@ _ROWS = [
      [("countries_over_time", "Countries over time: heat map", ["countries_over_time"]), ("countries_timeline", "Countries over time: timeline (bubbles)", ["countries_timeline"])]),
     ("Country_Radar", "Countries", "Country radar", "Five indicators (documents, citations, citations per document, h-index, share of multi-country papers) of the most productive countries, as a radar chart.", ["Countries"],
      [("radar_countries", "Radar chart: countries on five indicators", ["radar_countries"])]),
+    ("Country_Bursts", "Countries", "Country bursts", "The countries with the strongest bursts of publication (CiteSpace-style burst history): table, plot and HTML page.", ["Countries"],
+     [("country_bursts", "Country bursts: strongest bursts of publication", ["country_bursts"])]),
     ("20_22_Countries", "Countries", "Countries' production and citations", "Documents and citations of the ten most productive countries.", ["Countries"],
      [("countries", "Countries: documents and citations", ["countries_production", "most_cited_countries"])]),
     ("World_Map", "Countries", "World map", "Documents of every country; the map shows the 15 most productive countries with name and number of documents.", ["Countries"],
@@ -65,6 +71,18 @@ _OPTIONS = {"11_Sources_Over_Time": [
     {"id": "top_countries", "label": "Number of countries in the heat map and the timeline plot", "kind": "number", "default": 10, "min": 1, "max": 60, "arg": "--top-countries"},
     {"id": "keep_ties", "label": "Also show more countries when they tie with the last one; the number above is then only a minimum", "kind": "check", "default": False, "arg": "--keep-ties", "arg_off": "--cut-ties"}],
             "10_Source_Impact": [{"id": "top_sources", "label": "Number of sources in the plots (those with the highest h-index)", "kind": "number", "default": 15, "min": 3, "max": 60, "arg": "--top-sources"}],
+            "Country_Bursts": [
+    {"id": "top", "label": "Number of countries shown (those with the strongest bursts)", "kind": "number", "default": 10, "min": 3, "max": 40, "arg": "--top"},
+    {"id": "gamma", "label": "Cost of starting a burst, gamma (a smaller value finds more and longer bursts; 0.7 reproduces CiteSpace on this study's countries)", "kind": "number", "float": True, "step": 0.1, "default": 0.7, "min": 0.1, "max": 2.0, "arg": "--gamma"},
+    {"id": "min_papers", "label": "Smallest number of papers an item needs to be tested for bursts", "kind": "number", "default": 5, "min": 2, "max": 30, "arg": "--min-papers"}],
+            "Author_Bursts": [
+    {"id": "top", "label": "Number of authors shown (those with the strongest bursts)", "kind": "number", "default": 10, "min": 3, "max": 40, "arg": "--top"},
+    {"id": "gamma", "label": "Cost of starting a burst, gamma (a smaller value finds more and longer bursts; 0.7 reproduces CiteSpace on this study's countries)", "kind": "number", "float": True, "step": 0.1, "default": 0.7, "min": 0.1, "max": 2.0, "arg": "--gamma"},
+    {"id": "min_papers", "label": "Smallest number of papers an item needs to be tested for bursts", "kind": "number", "default": 4, "min": 2, "max": 30, "arg": "--min-papers"}],
+            "Institution_Bursts": [
+    {"id": "top", "label": "Number of institutions shown (those with the strongest bursts)", "kind": "number", "default": 10, "min": 3, "max": 40, "arg": "--top"},
+    {"id": "gamma", "label": "Cost of starting a burst, gamma (a smaller value finds more and longer bursts; 0.7 reproduces CiteSpace on this study's countries)", "kind": "number", "float": True, "step": 0.1, "default": 0.7, "min": 0.1, "max": 2.0, "arg": "--gamma"},
+    {"id": "min_papers", "label": "Smallest number of papers an item needs to be tested for bursts", "kind": "number", "default": 5, "min": 2, "max": 30, "arg": "--min-papers"}],
             "World_Map": [{"id": "top_countries", "label": "Number of countries on the map (the most productive ones)", "kind": "number", "default": 15, "min": 1, "max": 60, "arg": "--top-countries"}],
             "14_Author_Over_Time": [
     {"id": "top_authors", "label": "Number of authors in the heat map and the timeline plot", "kind": "number", "default": 15, "min": 1, "max": 100, "arg": "--top-authors"},
@@ -86,10 +104,11 @@ _EXPLAIN = {"09_Bradford": """<h3>How the core sources are calculated</h3>
 <li><b>C(r) = a + b ln(r), R&sup2; (red dashed line).</b> The straight line that fits the curve best when rank is on the logarithmic axis (least squares). <i>C(r)</i> is the cumulative number of documents at rank <i>r</i>; <i>b</i> (the slope) is the number of documents added each time the rank is multiplied by e (about 2.72) and <i>a</i> (the intercept) is where the line cuts the vertical axis at ln(r) = 0. <i>R&sup2;</i> says how well the line fits, from 0 (not at all) to 1 (perfectly): the closer to 1, the better the data follow Bradford's law. The title above the plot repeats k, R&sup2;, the number of sources and the number of documents used.</li>
 </ul>"""}
 _PER_PLOT = {"10_Source_Impact"}        # the plot script makes only the plot asked for (--only ID)
-_EXTRA_CSV = {"Country_Radar": ["Country_Radar_scaled.csv"], "18_Affil_Over_Time": ["18_Affil_Timeline.csv"], "11_Sources_Over_Time": ["11_Source_Timeline.csv"], "21_Countries_Over_Time": ["21_Country_Timeline.csv"], "Country_Collaboration": ["Country_Collaboration_chord.csv"], "14_Author_Over_Time": ["14_Author_Timeline.csv"], "05_Life_Cycle": ["05_Life_Cycle_parameters.csv"], "09_Bradford": ["09_Bradford_zones.csv"], "15_Lotka": ["15_Lotka_parameters.csv"]}
+_DOWNLOADS = {n: [{"file": f"{n}.html", "label": "Download the HTML page"}] for n in ("Country_Bursts", "Author_Bursts", "Institution_Bursts")}      # extra files a task page offers
+_EXTRA_CSV = {"Country_Bursts": ["Country_Bursts_yearly.csv"], "Author_Bursts": ["Author_Bursts_yearly.csv"], "Institution_Bursts": ["Institution_Bursts_yearly.csv"], "Country_Radar": ["Country_Radar_scaled.csv"], "18_Affil_Over_Time": ["18_Affil_Timeline.csv"], "11_Sources_Over_Time": ["11_Source_Timeline.csv"], "21_Countries_Over_Time": ["21_Country_Timeline.csv"], "Country_Collaboration": ["Country_Collaboration_chord.csv"], "14_Author_Over_Time": ["14_Author_Timeline.csv"], "05_Life_Cycle": ["05_Life_Cycle_parameters.csv"], "09_Bradford": ["09_Bradford_zones.csv"], "15_Lotka": ["15_Lotka_parameters.csv"]}
 
 SHEETS = [{"name": n, "group": g, "title": t, "what": w, "needs": needs, "csvs": [f"{n}.csv"] + _EXTRA_CSV.get(n, []),
-           "options": _OPTIONS.get(n, []), "per_plot": n in _PER_PLOT, "explain": _EXPLAIN.get(n, ""), "plots": [{"id": i, "title": pt, "files": files} for i, pt, files in plots]} for n, g, t, w, needs, plots in _ROWS]
+           "options": _OPTIONS.get(n, []), "per_plot": n in _PER_PLOT, "downloads": _DOWNLOADS.get(n, []), "explain": _EXPLAIN.get(n, ""), "plots": [{"id": i, "title": pt, "files": files} for i, pt, files in plots]} for n, g, t, w, needs, plots in _ROWS]
 BY_NAME = {s["name"]: s for s in SHEETS}
 GROUPS = list(dict.fromkeys(s["group"] for s in SHEETS))
 
@@ -102,7 +121,8 @@ def option_values(project, name):
         v = saved.get(o["id"], o["default"])
         if o["kind"] == "number":
             try:
-                v = min(max(int(v), o["min"]), o["max"])
+                v = min(max(float(v) if o.get("float") else int(v), o["min"]), o["max"])
+                v = round(v, 2) if o.get("float") else v
             except (TypeError, ValueError):
                 v = o["default"]
         else:

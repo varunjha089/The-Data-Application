@@ -195,3 +195,5 @@ A sheet can declare options (`_OPTIONS` in `app/sheets.py`); its page shows them
 ## Version control
 
 This folder is a git repository (`git log` shows the history of the application's code). Only the application is under git, not the projects or the data.
+
+- 2026-10-23: new tasks "Country bursts", "Author bursts" and "Institution bursts" (CiteSpace-style burst history): Kleinberg burst detection on the yearly paper counts, table + year strip as PNG/SVG + an HTML page in the layout of CiteSpace (offered as a download only). Choices saved: how many to show (10), gamma (0.7, a decimal choice), smallest number of papers (5, authors 4). Checked: on the Country data gamma 0.7 gives the same 10 countries and the same begin and end years as the CiteSpace table (strengths within about 0.4); authors and institutions have no CiteSpace table to compare with. NOT checked: clicking in the window; a burst in the last year only (e.g. an author whose papers are all in 2025) is an edge effect.

@@ -149,7 +149,7 @@ class App:
             plots = [{"id": p["id"], "title": p["title"], "files": [{"name": f, "exists": (pr.dir / spec["name"] / f"{f}.png").exists()} for f in p["files"]]} for p in spec["plots"]]
             out.append({**{k: spec[k] for k in ("name", "group", "title", "what", "needs")}, **st, "csvs": csvs, "plots": plots,
                         "log": (pr.dir / spec["name"] / f"{spec['name']}_log.txt").exists(),
-                        "explain": spec["explain"], "options": [{**o, "value": sheetlist.option_values(pr, spec["name"])[o["id"]]} for o in spec["options"]]})
+                        "explain": spec["explain"], "downloads": [{**d, "exists": (pr.dir / spec["name"] / d["file"]).exists()} for d in spec["downloads"]], "options": [{**o, "value": sheetlist.option_values(pr, spec["name"])[o["id"]]} for o in spec["options"]]})
         return {"sheets": out, "groups": sheetlist.GROUPS, "clean_ready": pr.clean_file.exists(), "bookmarks": pr.load().get("bookmarks") or {}}
 
     def table(self, pr, name, csv_file, page, size):
@@ -289,8 +289,8 @@ def make_handler(app):
                     return self._send(404, {"error": "not found"})
                 fname = Path(parts[1]).name
                 path = pr.dir / parts[0] / fname
-                if path.suffix not in (".png", ".svg", ".csv", ".txt") or not path.is_file():
-                    return self._send(404, {"error": "not found"})
+                if path.suffix not in (".png", ".svg", ".csv", ".txt", ".html") or not path.is_file() or (path.suffix == ".html" and not q.get("download")):
+                    return self._send(404, {"error": "not found"})            # an .html file of a task is only offered as a download, never shown by the application itself
                 extra = {"Content-Disposition": f'attachment; filename="{fname}"'} if q.get("download") else None
                 return self._send(200, path.read_bytes(), MIME.get(path.suffix, "application/octet-stream"), extra)
             if p.startswith("/download/"):
