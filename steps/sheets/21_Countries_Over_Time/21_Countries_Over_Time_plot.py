@@ -31,19 +31,59 @@ def save(fig, name):
     print(f"written {name}.png and {name}.svg")
 
 
+import datetime
+from matplotlib.ticker import FormatStrFormatter, MaxNLocator
+import numpy as np
+
+
+# Year axes: a corpus can span 10 years or 55, so the axis must not draw one label per year. Numeric axis with about 10 round ticks, an axis that starts where
+# the data does (the first year at which 1% of the papers are reached; the hidden years are named in the axis label), early-access years shaded.
+def year_start(years, size, share=0.01):
+    """first year at which the running total of `size` (papers per year) reaches `share` of the whole"""
+    years, cum = list(years), np.cumsum(np.asarray(size, dtype=float))
+    return years[int(np.argmax(cum >= share * cum[-1]))] if len(cum) and cum[-1] > 0 else (years[0] if years else 0)
+
+
+def year_label(years, size, start, label="Year"):
+    """axis label that says which early years were left out (and how many papers they hold)"""
+    years, size = list(years), np.asarray(size, dtype=float)
+    hid = size[[y < start for y in years]]
+    return label if not len(hid) or start <= min(years) else f"{label}   ({min(years)}-{start - 1} not shown: {hid.sum():.0f} {"paper" if hid.sum() == 1 else "papers"}, {100 * hid.sum() / size.sum():.1f}%)"
+
+
+def year_axis(ax, years, pad=0.6):
+    """about 10 integer ticks whatever the span; years after the current year (early access) are shaded"""
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True, nbins=10, steps=[1, 2, 5, 10]))
+    ax.xaxis.set_major_formatter(FormatStrFormatter("%d"))
+    ax.set_xlim(min(years) - pad, max(years) + pad)
+    this = datetime.date.today().year
+    if max(years) > this:
+        ax.axvspan(this + 0.5, max(years) + 0.5, color="#888888", alpha=0.13, lw=0, zorder=0)
+        ax.text((this + max(years) + 1) / 2, 0.05, "early access", transform=ax.get_xaxis_transform(), rotation=90, va="bottom", ha="center", fontsize=8, color="#555555")
+
+
 t = read()
 years = [c for c in t.columns if c.isdigit()]
 m = t[years].to_numpy()
+yn = [int(y) for y in years]
+size = m.sum(axis=0)
+start = year_start(yn, size)
+xlab = year_label(yn, size, start)
+keep = [i for i, y in enumerate(yn) if y >= start]
+years, m, size, yn = [years[i] for i in keep], m[:, keep], size[keep], [yn[i] for i in keep]
 fig, ax = plt.subplots(figsize=(10, 0.55 * len(t) + 2.2))
 im = ax.imshow(m, cmap="Blues", aspect="auto")
-ax.set_xticks(range(len(years)), years)
+step = max(1, int(np.ceil(len(years) / 12)))        # at most about 12 labels
+ax.set_xticks(range(0, len(years), step), years[::step])
+if yn[-1] > datetime.date.today().year:         # early-access years are marked
+    ax.axvspan(yn.index(datetime.date.today().year + 1) - 0.5, len(yn) - 0.5, color="#888888", alpha=0.25, lw=0)
 ax.set_yticks(range(len(t)), [short(a, 40) for a in t["Country"]])
 ax.grid(False)
 for i in range(m.shape[0]):
     for j in range(m.shape[1]):
         if m[i, j]:
             ax.text(j, i, int(m[i, j]), ha="center", va="center", color="white" if m[i, j] > m.max() * 0.55 else "black")
-ax.set_xlabel("Year")
+ax.set_xlabel(xlab)
 ax.set_title("Countries' production over time (papers per year)")
 save(fig, "countries_over_time")
 
@@ -64,8 +104,7 @@ for a, g in tl.groupby("Country"):
     ax.plot([g["Year"].min(), g["Year"].max()], [ypos[a]] * 2, color="#C9A0A0", lw=2.5, zorder=1, solid_capstyle="round")
 sc = ax.scatter(tl["Year"], [ypos[a] for a in tl["Country"]], s=bubble(tl["Papers"]), c=tl["TC per year"], cmap=BLUES_FROM_LIGHT, vmin=0, vmax=tl["TC per year"].max(), alpha=0.85, edgecolor="#1F3F6B", linewidth=0.6, zorder=2)
 ax.set_yticks([ypos[a] for a in order], [short(a, 30) for a in order], fontweight="bold")
-ax.set_xticks(range(int(tl["Year"].min()), int(tl["Year"].max()) + 1))
-ax.set_xlim(tl["Year"].min() - 0.6, tl["Year"].max() + 0.6)
+year_axis(ax, tl["Year"])
 ax.set_ylim(-0.7, len(order) - 0.3)
 ax.grid(axis="y")
 ax.grid(axis="x", visible=False)
