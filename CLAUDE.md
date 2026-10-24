@@ -89,6 +89,6 @@ with `--location <scratch>` (the sample project is ideal: `python3 the_data_app.
 ## Git and releases
 
 - This folder is the repository (`main`, remote `origin`). Look at `git status` first; commit after every checked change with a message that says what and why
-  (attribution lines of the session at the end); one topic per commit; never a half-working state. Push only when the owner asks; never rewrite pushed history.
+  (attribution lines of the session at the end); one topic per commit; never a half-working state. Push to `origin` after every change that is verified (tests pass, the new commits scanned clean): the owner asked for this on 2026-10-24; never rewrite pushed history.
 - Never commit data, tokens, personal paths, `.venv/`, `__pycache__/`, logs or `*.local.*` (see `.gitignore`). Before a push, scan the new commits for them.
 - A release: raise `__version__` in `app/__init__.py`, describe it in `README.md`, run the full tests and the fresh-clone test, commit, tag `vX.Y.Z`.
