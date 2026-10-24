@@ -6,7 +6,7 @@ _ROWS = [
     ("Authors", "Tables", "Authors", "One row per paper and author (the author is the Scopus Author ID, never the name).", [], []),
     ("Affiliations", "Tables", "Affiliations", "One row per paper and affiliation, with its country and institution.", [], []),
     ("Countries", "Tables", "Countries", "One row per paper and country (a paper counts once for each of its countries).", [], []),
-    ("References", "Tables", "References", "One row per paper and cited reference (this export keeps at most 10 per paper).", [], []),
+    ("References", "Tables", "References", "One row per paper and cited reference. Needs a Scopus export made with the References option; without it this sheet is skipped.", [], []),
     ("Author_Summary", "Tables", "Author summary", "Per author: papers, fractional papers, citations, first year, h, g and m index.", ["Authors"], []),
     ("02_Main_Information", "Main information", "Main information", "The main numbers of the data set and the documents by type.", ["Authors", "Author_Summary", "Countries", "References"],
      [("document_types", "Documents by type", ["document_types"])]),

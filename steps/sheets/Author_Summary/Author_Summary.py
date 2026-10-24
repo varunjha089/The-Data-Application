@@ -1,7 +1,7 @@
 """Sheet "Author_Summary" (query Author_Summary): one row per Scopus Author ID with his or her production and impact.
 Excel: reference of Authors; group by EID to get the number of authors n of each paper and give every author of it the fraction 1/n; group by Author ID:
 NP = number of papers, NP_Frac = sum of the fractions (fractional counting), TC = total citations, PY_start = first year, Author = the name used most often
-(of equally frequent names the last one), h_index, g_index, m_index = h / (2026 - PY_start + 1); sorted by NP then NP_Frac, both descending.
+(of equally frequent names the last one), h_index, g_index, m_index = h / max(2026 - PY_start + 1, 1) (floored at 1: early-access items dated after 2026 would otherwise divide by zero); sorted by NP then NP_Frac, both descending.
 Input : Authors/Authors.csv (run Authors.py first)        Output: Author_Summary.csv
 Note  : entries without an Author ID form one group with an empty ID, as in Power Query.
 Run   : python3 Author_Summary.py
@@ -55,7 +55,7 @@ for ident, g in au.groupby("Author ID", sort=False, dropna=False):
     top = max(count.values())
     author = [n for n in names if count[n] == top][-1]
     h, py = h_index(cites), int(g["Year"].min())
-    rows.append((ident, len(g), g["Frac"].sum(), int(sum(cites)), py, author, h, g_index(cites), round(h / (2026 - py + 1), 3)))
+    rows.append((ident, len(g), g["Frac"].sum(), int(sum(cites)), py, author, h, g_index(cites), round(h / max(2026 - py + 1, 1), 3)))
 summary = pd.DataFrame(rows, columns=["Author ID", "NP", "NP_Frac", "TC", "PY_start", "Author", "h_index", "g_index", "m_index"])
 summary = summary.sort_values(["NP", "NP_Frac"], ascending=False, kind="stable").reset_index(drop=True)
 print(f"{len(summary)} authors; most papers: {summary.iloc[0]['Author']} ({summary.iloc[0]['NP']})")

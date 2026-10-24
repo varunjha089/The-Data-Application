@@ -1,6 +1,6 @@
 """Sheet "10_Source_Impact" (query Source_Impact): production and impact of every source (Biblioshiny "Sources' Local Impact").
 Excel: reference of Clean_Main_Data; keep Year, Source title, Cited by, EID; group by Source title: NP = number of papers, TC = total citations, PY_start = first year,
-h_index, g_index, m_index = h / (2026 - PY_start + 1); sorted by h_index (largest first).
+h_index, g_index, m_index = h / max(2026 - PY_start + 1, 1) (floored at 1: early-access items dated after 2026 would otherwise divide by zero); sorted by h_index (largest first).
 Option: --top-sources N (default 15): the column "In plots" is 1 for the N sources with the highest h-index (then most citations, then name); the plots show those.
 Input : 01_Clean_Data/clean_main_data.csv        Output: 10_Source_Impact.csv
 Note  : papers without a Source title (missing in the export) are left out; their number is printed.
@@ -50,7 +50,7 @@ rows = []
 for source, g in clean.dropna(subset=["Source title"]).groupby("Source title", sort=False):
     cites = g["Cited by"].tolist()
     h, py = h_index(cites), int(g["Year"].min())
-    rows.append((source, len(g), int(sum(cites)), py, h, g_index(cites), round(h / (2026 - py + 1), 3)))
+    rows.append((source, len(g), int(sum(cites)), py, h, g_index(cites), round(h / max(2026 - py + 1, 1), 3)))
 table = pd.DataFrame(rows, columns=["Source title", "NP", "TC", "PY_start", "h_index", "g_index", "m_index"])
 table = table.sort_values("h_index", ascending=False, kind="stable").reset_index(drop=True)
 ap = argparse.ArgumentParser()

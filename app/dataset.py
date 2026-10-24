@@ -2,10 +2,27 @@
 import csv
 import hashlib
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 
 REQUIRED_COLUMNS = ["EID", "Title", "Authors", "Year"]
+
+
+def allow_long_fields():
+    """Python's csv module refuses any cell longer than 131072 characters. A Scopus export made with the References option has such cells
+    (one paper alone can cite thousands of works), so the limit is raised to the largest value this system accepts (sys.maxsize overflows on
+    Windows, hence the loop). The setting is global to the csv module, so importing this module is enough for the whole application."""
+    n = sys.maxsize
+    while True:
+        try:
+            csv.field_size_limit(n)
+            return
+        except OverflowError:
+            n //= 10
+
+
+allow_long_fields()
 
 
 def validate(path):

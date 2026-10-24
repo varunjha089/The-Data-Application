@@ -1,6 +1,6 @@
 """Sheet "04_Avg_Citations": average citations per paper and per year of age (Biblioshiny "Average Article Citations per Year").
 Excel formulas, for every year: Documents = COUNTIFS(Year); Total Citations = SUMIFS(Cited by); Mean Citations per Document = Total / Documents;
-Citable Years = 2026 - Year + 1; Mean Citations per Year = Mean per Document / Citable Years.
+Citable Years = max(2026 - Year + 1, 1) (floored at 1: early-access items dated after 2026 would otherwise divide by zero); Mean Citations per Year = Mean per Document / Citable Years.
 Input : 01_Clean_Data/clean_main_data.csv        Output: 04_Avg_Citations.csv
 Run   : python3 04_Avg_Citations.py
 """
@@ -30,6 +30,6 @@ table = pd.DataFrame({"Year": list(years)})
 table["Documents"] = table["Year"].map(clean.groupby("Year").size()).fillna(0).astype(int)
 table["Total Citations"] = table["Year"].map(clean.groupby("Year")["Cited by"].sum()).fillna(0).astype(int)
 table["Mean Citations per Document"] = table["Total Citations"] / table["Documents"]
-table["Citable Years"] = 2026 - table["Year"] + 1
+table["Citable Years"] = (2026 - table["Year"] + 1).clip(lower=1)
 table["Mean Citations per Year"] = table["Mean Citations per Document"] / table["Citable Years"]
 write(table)

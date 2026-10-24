@@ -16,7 +16,7 @@ Today it can: **create and open projects, set up a Python environment per projec
   Without one it opens in your default browser instead (Safari, Firefox): everything works the same.
 - An internet connection the first time a project sets up its environment (to download the packages, `pandas` for now). If your Python is brand new and a
   package is not available for it yet, use Python 3.11 to 3.13.
-- A **Scopus export in CSV format** (Scopus, "Export", CSV, with all fields; the file needs the columns EID, Title, Authors and Year).
+- A **Scopus export in CSV format** (Scopus, "Export", CSV, with all fields; the file needs the columns EID, Title, Authors and Year). Tick the **References** option in the Scopus export dialog (it is separate from "Bibliographical information"): without it the sheet References cannot be built and is skipped.
 
 ## Start (no terminal needed)
 
