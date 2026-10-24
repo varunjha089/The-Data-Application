@@ -7,7 +7,7 @@ Output: Topic_Slices.csv (the overview), Topic_Slices_top_cited.csv, Topic_Slice
         and, when topic_slices.json defines an "audit": Topic_Slices_gap_audit.csv; when it defines "literature": Topic_Slices_reference_audit.csv and the two "cites" lists
 Run   : python3 Topic_Slices.py
 topic_slices.json (every key optional; patterns are regular expressions, matched in lower case on title + abstract + keywords, or on reference text):
-  slices            [{"name": ..., "searches": ["Q07", ...], "min_searches": 4}]  a slice = papers found by any listed search, or by at least min_searches searches
+  slices            [{"name": ..., "searches": ["Q02", ...], "min_searches": 4}]  a slice = papers found by any listed search, or by at least min_searches searches
   overview_years    years that get their own column in the overview;  recent_years: years whose share is reported;  trend_years: [first, last] of the term trend
   reference_slices  names of the slices whose reference lists are summed up
   term_trend        {"label": "pattern"}  share of the papers per year that mention the term

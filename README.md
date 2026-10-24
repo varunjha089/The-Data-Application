@@ -61,7 +61,7 @@ After you open a project, the **menu on the left** (press *Menu* to hide or show
 | **Overview** | all tasks in one table; **Generate all data** and **Generate all plots** |
 | **Settings** | the project's own, **persistent** settings (saved in `project.json`): the **Python environment** and the **main data**, plus the project's name and folder |
 | **Step 1: Clean the data** | one button; the steps, counts and checks appear as they run; afterwards the report, the first rows of the cleaned data, and buttons to download the cleaned CSV, the report and the log |
-| **Tables, Main information, Production, Sources, Authors, Affiliations, Countries, Documents** | one page per sheet of the analysis (the sheets of the reference workbook `Biblioshiny_Analysis.xlsx`), see below |
+| **Tables, Main information, Production, Sources, Authors, Affiliations, Countries, Documents** | one page per sheet of the analysis (the tables and charts of a Biblioshiny-style analysis), see below |
 
 A task needs the cleaned data (step 1); a task that needs another sheet (for example *Author summary* needs *Authors*) generates it first by itself.
 
@@ -94,14 +94,14 @@ Each sheet is one Python file (`steps/sheets/<Sheet>/<Sheet>.py`) and each plot 
 so the folder of a project also holds the scripts and results of every sheet. The scripts are readable on their own: a header says what the sheet is, the Excel method it follows, its input and its output.
 Year axes adapt to the data and you choose the range. The plots of production, citations, life cycle and "over time" (sheets 03, 04, 05, 11, 14, 18, 21) and the three burst strips draw about 10 round ticks
 whatever the span, shade years after the current year as early access, and by default start where 1% of the papers have been reached (the hidden years and their paper count are named in the axis label).
-On each of those sheet pages the box **Your choices** has **First year drawn** and **Last year drawn** (0 = automatic): type, for example, 1990 and 2025 and generate the plot again. The choice is saved in the project,
-cuts only the picture and never the table, and a reversed range is swapped. The helpers (`year_args`, `year_window`, `year_label`, `year_axis`, `year_rows`) are a short block inside each of those scripts, because each script must run on its own
+Which years are drawn is set once for the project (Settings, **Years in the plots**: the last 10 or 5 complete years, all years, or years you choose), and each of those
+sheet pages can override it in **Your choices** (the project's years, all years, or a first and last year). The choice cuts only the picture, never the table. The helpers (`year_args`, `year_window`, `year_label`, `year_axis`, `year_rows`) are a short block inside each of those scripts, because each script must run on its own
 (by hand: `python3 03_Annual_Production_plot.py --from-year 1990 --to-year 2025`). Options marked `"for": "plot"` in `app/sheets.py` go to the plot script only; the sheet's data is not made again for them.
-Notes on the January export: 79 papers have no source title (left out of the source sheets) and the export keeps at most 10 references per paper.
+Papers without a source title are left out of the source sheets.
 
 ## What the cleaning does
 
-`steps/01_clean_data.py` is an ordinary Python file (it can be run by hand and read on its own). It follows the Power Query steps of the study, in order:
+`steps/01_clean_data.py` is an ordinary Python file (it can be run by hand and read on its own). It follows the steps of a documented Power Query cleaning, in order:
 
 | Step | What |
 |---|---|
@@ -181,51 +181,33 @@ python3 the_data_app.py gui --no-window               # start the server only an
 ## Sharing it with friends
 
 The application is on GitHub: https://github.com/varunjha089/The-Data-Application (MIT licence). Send that link, or send the application folder as it is: it contains no projects, data, settings or environments of yours (those are in the folders you chose and in your user settings folder).
-Your friend opens the application, creates a project in a folder of their choice, and the window sets everything up on their computer. (`PLAN.md` and `CLAUDE.md` are notes for
-the developers.) On a Mac, a downloaded copy of the `.app` is blocked once by Gatekeeper: right-click it, choose Open, confirm. To share a **project** (not the application),
+Your friend opens the application, creates a project in a folder of their choice, and the window sets everything up on their computer. (`CLAUDE.md` is the guide for
+developers.) On a Mac, a downloaded copy of the `.app` is blocked once by Gatekeeper: right-click it, choose Open, confirm. To share a **project** (not the application),
 copy its folder without `.venv` (a venv does not work on another system) and open it on the other computer with "A project that is not in the list".
 
 ## What comes next
 
 More analyses will be added the same way: a script in `steps/sheets/` (or `steps/`), an entry in `app/sheets.py`, and it appears in the menu with its table and plot button.
-Decisions and status are in `PLAN.md`, working rules in `CLAUDE.md`.
+Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s tests` must pass.
 
-## Packages and the world map (2026-10-21)
+## More about the sheets
 
-- Missing packages (matplotlib, numpy, openpyxl, pillow) are downloaded automatically into the project's environment the first time a clean / sheet / plot run needs them (internet needed); Settings still shows the manual button.
-- New sheet `World_Map` (group Countries): documents of every country and the map of the 15 most productive countries (matplotlib only; Natural Earth polygons in `world_countries_india_view.json`). Checked: run on the January data in the `wm_rs_application` project, plot viewed. NOT checked: Windows/Linux.
-
-## Choices asked from the user (2026-10-21)
-
-A sheet can declare options (`_OPTIONS` in `app/sheets.py`); its page shows them above the buttons, they are saved in `project.json` (`sheet_options`) when changed and passed to the sheet script as arguments. First uses: "World map" (number of countries) and "Authors over time" (heat map and timeline) (number of authors in the timeline, keep ties or not; defaults 15 / cut at exactly N). A plot of a sheet with options regenerates the data first. Checked: saving, arguments, script, plot (10 authors with ties cut). NOT checked: clicking in the window.
-
-- 2026-10-21: timeline (bubble) plots with a "top n" choice for Sources ("Sources over time", default 10) and Countries (new task "Countries over time", default 10), like Authors; bubble area scales with the largest value of the plot. Checked: all three plots generated and viewed in wm_rs_application. NOT checked: clicking in the window.
-
-- 2026-10-22: bookmarks: the dot of every menu item can become a red, green, violet or orange star (hover the marker, choose a colour; the same colour again, or the x, removes it). Saved in project.json ("bookmarks"). Checked in Chrome: hover, choose, reload. NOT checked: touch screens (a click on the marker also opens the colours).
-
-- 2026-10-22: "Source impact" has eight plots to choose from (bars, two pyramids, bubbles, dumbbell h/g, heat map, citations per paper, m-index against first year); the top n sources (default 15, by h-index) is a saved choice, the CSV gets a column "In plots". A sheet can run one plot at a time (`_PER_PLOT`, script argument --only ID). Checked: all eight generated and viewed in wm_rs_application. NOT checked: clicking in the window.
-
-- 2026-10-22: "Affiliations over time" also has a timeline (bubble) plot with a saved "number of institutions" choice (default 10, ties cut), like Sources and Countries. Checked: generated and viewed in wm_rs_application. NOT checked: clicking in the window.
-
-- 2026-10-22: new task "Country radar" (Countries group): radar chart of the top countries on five indicators (documents, citations, citations per document, country h-index, share of multi-country papers), scaled to the top 10; the number of countries drawn is a saved choice (default 5). From the October chart Charts/08_Radar. Checked: generated and viewed in wm_rs_application; values compared with the October table. NOT checked: clicking in the window.
-
-- 2026-10-22: new task "Languages (pie)" (Main information group): papers by language of the original document; the number of languages with their own slice is a saved choice (default 8, the rest grouped as "Other languages"). Checked: generated and viewed in wm_rs_application; counts add up to the 1,149 papers. NOT checked: clicking in the window.
-
-- 2026-10-22: the task "Conferences (editions)" was built and then taken out of the application on request; its code is kept in `future/Conferences/` and the idea in `FUTURE_PLAN.md` (point 2).
-
-## Version control
-
-This folder is a git repository (`git log` shows the history of the application's code). Only the application is under git, not the projects or the data.
-
-- 2026-10-23: new tasks "Country bursts", "Author bursts" and "Institution bursts" (CiteSpace-style burst history): Kleinberg burst detection on the yearly paper counts, table + year strip as PNG/SVG + an HTML page in the layout of CiteSpace (offered as a download only). Choices saved: how many to show (10), gamma (0.7, a decimal choice), smallest number of papers (5, authors 4). Checked: on the Country data gamma 0.7 gives the same 10 countries and the same begin and end years as the CiteSpace table (strengths within about 0.4); authors and institutions have no CiteSpace table to compare with. NOT checked: clicking in the window; a burst in the last year only (e.g. an author whose papers are all in 2025) is an edge effect.
-
-## Name rules and the Topic_Slices sheet (added 2026-10-24)
-
-- `steps/common/names.py` holds the country and institution rules (known-country list, aliases, US state + ZIP, institution without departments, one name per spelling). The application copies it into `<project>/common/` before every clean or sheet run.
-- Countries and Affiliations now use these rules; an address with no recognisable country gives no country instead of a wrong one (USA, FRG, "MA 02125" and so on).
-- `01_clean_data.py` keeps `Query_IDs` and `N_Queries` when the data has them. The Clean page has a box **Searches to drop** (also `python3 the_data_app.py clean -p NAME --exclude-only-queries Q13`): papers returned only by those searches (for example a search known to be noise) are dropped. It is saved in the project, and changing it marks the cleaned file out of date.
-- Sheet `Topic_Slices`: slices by search, term trends, optional gap audit and reference audit. Needs `Query_IDs` and a References export. What it cuts and looks for is **not in the code**: it is read from `topic_slices.json` in the project folder (next to `01_Clean_Data`). The first run writes one with automatic choices (the biggest searches as slices, the most frequent keywords as the term trend, no audit) for you to edit; the format is at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`. A worked definition (the Watershed study: flood / water mapping with conformal prediction) is in `steps/sheets/Topic_Slices/examples/`.
-- The burst plots write a "no burst found" picture instead of failing; the Bradford title shows the years of the data.
+- **Packages**: a package a script needs (matplotlib, numpy, openpyxl, pillow) is installed into the project's environment the first time it is needed (internet needed); Settings also has a button for it.
+- **World map**: documents of every country and a map of the most productive ones (matplotlib only; Natural Earth polygons, India worldview, in `world_countries_india_view.json`).
+- **Your choices**: a sheet can declare options (`_OPTIONS` in `app/sheets.py`); its page shows them above the buttons, they are saved in `project.json` and passed to the
+  script as arguments (how many authors, countries, sources or institutions; keep ties; burst settings; years). A plot of a sheet with data options makes its data again first.
+- **Timelines** (bubbles) for sources, authors, institutions and countries, with a "top n" choice; **Source impact** has eight plots to choose from (bars, two pyramids,
+  bubbles, dumbbell, heat map, citations per paper, m-index against first year); **Country radar** (five indicators); **Languages**, **Document types** and **Open access** pies.
+- **Bursts** for countries, authors and institutions (Kleinberg burst detection on the yearly counts, like CiteSpace's burst history): table, year strip and an HTML page.
+  A burst in the last year only is an edge effect.
+- **Bookmarks**: the dot of a menu item can become a red, green, violet or orange star (saved in `project.json`).
+- **Name rules** (`steps/common/names.py`): known countries and their aliases (USA, FRG, a US state + ZIP), the institution of an address without its department, one name
+  per spelling, parent organisations. An address with no recognisable country gives no country rather than a wrong one.
+- **Merged searches**: when the export carries `Query_IDs` / `N_Queries` (several Scopus searches merged), the Clean page has **Searches to drop** (papers found only by a
+  noise search, e.g. `Q3`), and the sheet **Topic_Slices** cuts the analysis by search, with term trends and an optional gap audit. What it cuts and looks for is set in
+  `topic_slices.json` in the project folder (written with automatic choices on the first run; format at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`;
+  an example for the sample project in `steps/sheets/Topic_Slices/examples/`).
+- The code is a git repository (`git log`); only the application is under git, never projects or data.
 
 ## Version 0.3.0 (2026-10-24)
 

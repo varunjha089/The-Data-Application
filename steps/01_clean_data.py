@@ -131,7 +131,7 @@ def clean(src, out):
     d = d[d["Authors"].notna()].copy()
     step("3. records without authors removed", d)
 
-    # 3b. papers returned ONLY by the searches named in --exclude-only-queries (a search known to be noise, e.g. Q13) are removed
+    # 3b. papers returned ONLY by the searches named in --exclude-only-queries (a search known to be noise, e.g. Q3) are removed
     if EXCLUDE_ONLY and has("Query_IDs"):
         d = d[~d["Query_IDs"].fillna("").map(lambda q: set(q.split(";")) <= set(EXCLUDE_ONLY))].copy()
         step(f"3b. papers found only by {','.join(EXCLUDE_ONLY)} removed", d)
@@ -260,7 +260,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Clean a Scopus CSV export.")
     ap.add_argument("--input", required=True, help="the Scopus CSV export")
     ap.add_argument("--output", required=True, help="the cleaned CSV to write")
-    ap.add_argument("--exclude-only-queries", default="", help="comma list of search IDs, e.g. Q13: papers returned only by these searches are dropped (needs Query_IDs)")
+    ap.add_argument("--exclude-only-queries", default="", help="comma list of search IDs, e.g. Q3: papers returned only by these searches are dropped (needs Query_IDs)")
     ap.add_argument("--no-country-fallback", action="store_true", help="do not give an address without a country the country of the same institution elsewhere in the data")
     a = ap.parse_args()
     EXCLUDE_ONLY = [q.strip() for q in a.exclude_only_queries.split(",") if q.strip()]

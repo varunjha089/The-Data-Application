@@ -1,7 +1,7 @@
 """Sheet "Authors" (query Authors): one row per paper and author.
 Excel: reference of Clean_Main_Data; keep Author full names, Title, Year, Source title, Cited by, Document Type, EID; split "Author full names" at "; " into rows;
 split each entry at its last " (" into Author Name and Author ID (the ID is what is counted, never the name).
-The name is written "First Last" ("Kumar, Varun" -> "Varun Kumar"); an entry without a comma stays as it is.
+The name is written "First Last" ("Smith, Jane" -> "Jane Smith"); an entry without a comma stays as it is.
 Input : 01_Clean_Data/clean_main_data.csv        Output: Authors.csv
 Run   : python3 Authors.py
 """

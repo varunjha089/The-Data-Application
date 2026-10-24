@@ -2,11 +2,11 @@
 Excel: read the raw Scopus CSV; keep References and EID; inner join with Clean_Main_Data on EID (only papers that survived the cleaning) and take its Year; drop papers
 without references; remove quotation marks; split at "); " into rows; clean and trim each; make sure each reference ends with ")"; one row per (EID, reference).
 The raw CSV is used because the cleaning step drops the long References column; the same text hygiene as in the cleaning step is applied to it.
-Input : the raw Scopus CSV (option --raw FILE [FILE ...]; default WM_RS/2.1. Master Data Time Frame_WM_RS_Sciento.csv) and 01_Clean_Data/clean_main_data.csv        Output: References.csv
+Input : the raw Scopus CSV (option --raw FILE [FILE ...]; default: every CSV in the project's data/raw/, where the application keeps its copy) and 01_Clean_Data/clean_main_data.csv        Output: References.csv
         Several raw files may be given; per paper (EID) the longest References text is used. A file without a References column is ignored.
         If NO given file has a References column (the export was made without the References option) the sheet is SKIPPED with a message, not
         built from nothing: no References.csv is written and the script ends normally, like the cleaning step does for a missing column.
-Note  : the January export keeps at most 10 references per paper, so this table is much smaller than one from a full export.
+Note  : some exports keep only the first references of each paper; the table is then smaller than the papers' real reference lists.
 Run   : python3 References.py
 """
 from pathlib import Path
@@ -36,9 +36,9 @@ import argparse
 import sys
 
 _ap = argparse.ArgumentParser(description="Sheet References")
-_ap.add_argument("--raw", nargs="+", help="one or more raw Scopus CSVs that contain a References column (default: WM_RS/2.1. Master Data Time Frame_WM_RS_Sciento.csv next to the folder that holds this one)")
+_ap.add_argument("--raw", nargs="+", help="one or more raw Scopus CSVs that contain a References column (default: every CSV in data/raw/ of the project)")
 _args = _ap.parse_args()
-RAWS = [Path(x) for x in _args.raw] if _args.raw else [SHEETS.parent / "WM_RS" / "2.1. Master Data Time Frame_WM_RS_Sciento.csv"]
+RAWS = [Path(x) for x in _args.raw] if _args.raw else sorted((SHEETS / "data" / "raw").glob("*.csv"))
 MOJI = re.compile(r"[\u00c2-\u00c5\u00e2]")        # Â Ã Ä Å â: the lead characters of broken accents and quotation marks (not "×", which is a real character)
 def fix_mojibake(s):
     """repair UTF-8 text that was read as Windows-1252 ('Ã¤' -> 'ä'); only runs that decode as valid UTF-8 are replaced"""

@@ -213,7 +213,7 @@ def main(argv=None):
     d = with_project(sub.add_parser("data", help="choose the project's main data (a copy is made)"))
     d.add_argument("file", help="the Scopus CSV")
     cl = with_project(sub.add_parser("clean", help="clean the project's main data"))
-    cl.add_argument("--exclude-only-queries", metavar="IDS", default=None, help="comma list of search IDs (e.g. Q13): papers returned only by these searches are dropped; saved in the project; \"\" switches it off")
+    cl.add_argument("--exclude-only-queries", metavar="IDS", default=None, help="comma list of search IDs (e.g. Q3): papers returned only by these searches are dropped; saved in the project; \"\" switches it off")
     sm = sub.add_parser("sample", help="create a project with a made-up Scopus export, to try the application")
     sm.add_argument("--location", metavar="FOLDER", help="folder in which the project folder is created (default: Documents)")
     y = with_project(sub.add_parser("years", help="show or set the years the plots draw (the whole project)"))

@@ -1,0 +1,63 @@
+{
+  "_help": "An example for the sample project (made-up data, searches Q01-Q03): copy it to <project folder>/topic_slices.json and generate Topic_Slices again. Every key is optional; the format is at the top of Topic_Slices.py.",
+  "slices": [
+    {
+      "name": "Q01 broad search",
+      "searches": [
+        "Q01"
+      ]
+    },
+    {
+      "name": "Q02 second search",
+      "searches": [
+        "Q02"
+      ]
+    },
+    {
+      "name": "Q03 uncertainty methods",
+      "searches": [
+        "Q03"
+      ]
+    },
+    {
+      "name": "Found by 2+ searches",
+      "searches": [],
+      "min_searches": 2
+    }
+  ],
+  "trend_years": [
+    2010,
+    2025
+  ],
+  "reference_slices": [
+    "Q03 uncertainty methods"
+  ],
+  "term_trend": {
+    "deep learning": "deep learning",
+    "Sentinel-1 / SAR": "sentinel.1|\\bsar\\b",
+    "Google Earth Engine": "google earth engine"
+  },
+  "audit": {
+    "title": "uncertainty method AND flood mapping",
+    "terms_column": "Uncertainty terms",
+    "topic_column": "Flood mapping (text)",
+    "all_of": [
+      "uncertainty|conformal",
+      "flood"
+    ],
+    "terms_from": 0,
+    "topic": [
+      1
+    ],
+    "flags": {
+      "Sentinel-1": "sentinel.1"
+    }
+  },
+  "literature": {
+    "uncertainty quantification": "uncertainty"
+  },
+  "cites_files": {
+    "topic": "Topic_Slices_cites_uncertainty_and_flood.csv",
+    "any": "Topic_Slices_cites_uncertainty_any_topic.csv"
+  }
+}

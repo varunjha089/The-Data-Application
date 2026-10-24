@@ -1,4 +1,4 @@
-"""The sheets of the analysis (the sheets of the reference workbook Biblioshiny_Analysis.xlsx): what each one is, what it needs, which plots it has.
+"""The sheets of the analysis (the tables and charts of a Biblioshiny-style analysis): what each one is, what it needs, which plots it has.
 The scripts are in steps/sheets/<Sheet>/<Sheet>.py (data) and <Sheet>_plot.py (plot); the application copies a script into the project's folder <Sheet>/ and runs it there."""
 
 from datetime import date

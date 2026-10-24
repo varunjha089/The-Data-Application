@@ -120,7 +120,7 @@ def clean_data(project, log):
     if src is None:
         return False, "No main data chosen yet (Settings)."
     py = project.python()
-    only = clean_exclude(project)                                # e.g. "Q13": papers found only by a noise search are dropped
+    only = clean_exclude(project)                                # e.g. "Q3": papers found only by a noise search are dropped
     fallback = clean_country_fallback(project)
     extra = (["--exclude-only-queries", only] if only else []) + ([] if fallback else ["--no-country-fallback"])
     cmd = runner.step_command(py, CLEAN_SCRIPT, ["--input", src, "--output", project.clean_file] + extra)
