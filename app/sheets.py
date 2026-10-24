@@ -94,6 +94,13 @@ _OPTIONS = {"11_Sources_Over_Time": [
             "14_Author_Over_Time": [
     {"id": "top_authors", "label": "Number of authors in the heat map and the timeline plot", "kind": "number", "default": 15, "min": 1, "max": 100, "arg": "--top-authors"},
     {"id": "keep_ties", "label": "Also show more authors when they tie with the last one (same number of papers); the number above is then only a minimum", "kind": "check", "default": False, "arg": "--keep-ties", "arg_off": "--cut-ties"}]}
+# the range of years the plots draw (the tables keep every year); "for": "plot" options go to the plot script, never to the data script
+_YEAR_OPTIONS = [
+    {"id": "year_from", "label": "First year drawn in the plots (0 = automatic: the year where 1% of the papers are reached). Plot only: the table keeps every year.", "kind": "number", "default": 0, "min": 0, "max": 2100, "arg": "--from-year", "for": "plot"},
+    {"id": "year_to", "label": "Last year drawn in the plots (0 = automatic: the last year of the data). Plot only.", "kind": "number", "default": 0, "min": 0, "max": 2100, "arg": "--to-year", "for": "plot"}]
+for _n in ("03_Annual_Production", "04_Avg_Citations", "05_Life_Cycle", "11_Sources_Over_Time", "14_Author_Over_Time", "18_Affil_Over_Time", "21_Countries_Over_Time", "Author_Bursts", "Country_Bursts", "Institution_Bursts"):
+    _OPTIONS[_n] = _OPTIONS.get(_n, []) + _YEAR_OPTIONS
+
 # an explanation shown at the bottom of a task page (HTML), before the Activity box
 _EXPLAIN = {"09_Bradford": """<h3>How the core sources are calculated</h3>
 <ol>
@@ -146,15 +153,22 @@ def save_options(project, name, values):
     return option_values(project, name)
 
 
-def option_args(project, name):
+def option_args(project, name, plot=False):
+    """the command-line arguments for the sheet's data script (plot=False) or for its plot script (plot=True: only the options marked "for": "plot")"""
     args = []
     for o in BY_NAME[name]["options"]:
+        if (o.get("for") == "plot") != plot:
+            continue
         v = option_values(project, name)[o["id"]]
         if o["kind"] == "number":
             args += [o["arg"], str(v)]
         elif (o["arg"] if v else o.get("arg_off")):
             args.append(o["arg"] if v else o["arg_off"])
     return args
+
+
+def has_data_options(name):
+    return any(o.get("for") != "plot" for o in BY_NAME[name]["options"])
 
 
 def get(name):

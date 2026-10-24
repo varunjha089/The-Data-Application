@@ -119,8 +119,9 @@ for i, (cx, cy) in enumerate(zip(core_x, core_y)):
 
 # Core legend box
 legend_text = '\n'.join([f'{i+1:>2}. {lbl}' for i, lbl in enumerate(core_labels)])
+core_font = 7.2 if len(core_labels) <= 18 else max(4.5, 7.2 * 18 / len(core_labels))      # a long core list gets a smaller font so that it stays inside the plot
 ax.text(0.06, Y_MAX * 0.96, legend_text,
-        fontsize=7.2, va='top', ha='left', family='monospace', color='#1a1a2e',
+        fontsize=core_font, va='top', ha='left', family='monospace', color='#1a1a2e',
         linespacing=1.55,
         bbox=dict(boxstyle='round,pad=0.4', fc='white', ec='#aaaaaa', linewidth=0.6, alpha=0.88),
         zorder=7)
@@ -144,8 +145,8 @@ ax.yaxis.grid(True, linewidth=0.4, alpha=0.45)
 ax.set_axisbelow(True)
 ax.spines[['top','right']].set_visible(False)
 ax.tick_params(axis='both', labelsize=9)
-ax.legend(fontsize=8.5, loc='upper left', bbox_to_anchor=(0.003, 0.60),
-          framealpha=0.85, edgecolor='#aaaaaa')
+# the cumulative curve only rises, so the lower right is always empty; the core list (top left) grows with the number of core sources and must never meet this legend
+ax.legend(fontsize=8.5, loc='lower right', bbox_to_anchor=(0.99, 0.12), framealpha=0.85, edgecolor='#aaaaaa')
 
 fig.tight_layout()
 for ext in ('png', 'svg'):

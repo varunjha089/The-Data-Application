@@ -3,6 +3,7 @@ Input : Institution_Bursts.csv and Institution_Bursts_yearly.csv in this folder 
 Columns: Institution, first year, strength, begin, end of the strongest burst, and a strip of the years: pale = before the first year, teal = after it, red = burst years.
 Run   : python3 Institution_Bursts_plot.py   (needs matplotlib, pandas)
 """
+import argparse
 from pathlib import Path
 
 import matplotlib
@@ -23,6 +24,13 @@ if t.empty:
         fig.savefig(HERE / f"institution_bursts.{ext}", dpi=150, bbox_inches="tight")
     raise SystemExit(0)
 years = sorted(y["Year"].unique())
+_ap = argparse.ArgumentParser()                                          # --from-year / --to-year (0 = automatic): the years drawn in the strip; the table keeps all of them
+_ap.add_argument("--from-year", type=int, default=0)
+_ap.add_argument("--to-year", type=int, default=0)
+_a, _ = _ap.parse_known_args()
+years = [yr for yr in years if (not _a.from_year or yr >= _a.from_year) and (not _a.to_year or yr <= _a.to_year)]
+if not years:
+    raise SystemExit("No year to draw: the chosen range holds no data.")
 n = len(t)
 
 

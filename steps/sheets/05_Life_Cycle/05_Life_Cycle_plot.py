@@ -31,24 +31,53 @@ def save(fig, name):
     print(f"written {name}.png and {name}.svg")
 
 
+import argparse
 import datetime
 from matplotlib.ticker import FormatStrFormatter, MaxNLocator
 import numpy as np
 
 
-# Year axes: a corpus can span 10 years or 55, so the axis must not draw one label per year. Numeric axis with about 10 round ticks, an axis that starts where
-# the data does (the first year at which 1% of the papers are reached; the hidden years are named in the axis label), early-access years shaded.
+# Year axes: a corpus can span 10 years or 55, so the axis must not draw one label per year. Numeric axis with about 10 round ticks, early-access years shaded, and a range
+# of years you can choose (--from-year / --to-year, 0 = automatic; the application passes your choice). Automatic start = the first year at which 1% of the papers are reached;
+# the years left out are named in the axis label. Only the picture is cut, never the table.
+def year_args():
+    """the first and last year asked for (0 = automatic)"""
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--from-year", type=int, default=0)
+    ap.add_argument("--to-year", type=int, default=0)
+    a, _ = ap.parse_known_args()
+    lo, hi = a.from_year, a.to_year
+    return (hi, lo) if lo and hi and lo > hi else (lo, hi)
+
+
 def year_start(years, size, share=0.01):
     """first year at which the running total of `size` (papers per year) reaches `share` of the whole"""
     years, cum = list(years), np.cumsum(np.asarray(size, dtype=float))
     return years[int(np.argmax(cum >= share * cum[-1]))] if len(cum) and cum[-1] > 0 else (years[0] if years else 0)
 
 
-def year_label(years, size, start, label="Year"):
-    """axis label that says which early years were left out (and how many papers they hold)"""
+def year_window(years, size, lo=0, hi=0):
+    """first and last year drawn: the chosen ones, else automatic (from the 1% year to the last year of the data)"""
+    start, end = lo or year_start(years, size), hi or max(years)
+    if start > end:
+        raise SystemExit(f"No year to draw: the range {start}-{end} is empty.")
+    return start, end
+
+
+def year_keep(years, start, end):
+    """True for the years inside the window"""
+    return [start <= y <= end for y in years]
+
+
+def year_label(years, size, start, end, label="Year"):
+    """axis label that says which years were left out (and how many papers they hold)"""
     years, size = list(years), np.asarray(size, dtype=float)
-    hid = size[[y < start for y in years]]
-    return label if not len(hid) or start <= min(years) else f"{label}   ({min(years)}-{start - 1} not shown: {hid.sum():.0f} {"paper" if hid.sum() == 1 else "papers"}, {100 * hid.sum() / size.sum():.1f}%)"
+    hid = [y for y in years if y < start or y > end]
+    if not hid or size.sum() == 0:
+        return label
+    n = size[[y < start or y > end for y in years]].sum()
+    parts = [f"{min(y for y in hid if y < start)}-{start - 1}" if any(y < start for y in hid) else "", f"{end + 1}-{max(y for y in hid if y > end)}" if any(y > end for y in hid) else ""]
+    return f"{label}   ({', '.join(p for p in parts if p)} not shown: {n:.0f} {'paper' if n == 1 else 'papers'}, {100 * n / size.sum():.1f}%)"
 
 
 def year_axis(ax, years, pad=0.6):
@@ -62,11 +91,20 @@ def year_axis(ax, years, pad=0.6):
         ax.text((this + max(years) + 1) / 2, 0.05, "early access", transform=ax.get_xaxis_transform(), rotation=90, va="bottom", ha="center", fontsize=8, color="#555555")
 
 
+def year_rows(df, col="Year"):
+    """the rows of a table whose year is inside the years you chose (all rows when you chose nothing)"""
+    lo, hi = year_args()
+    out = df[(df[col] >= (lo or df[col].min())) & (df[col] <= (hi or df[col].max()))]
+    if out.empty:
+        raise SystemExit(f"No data between {lo or 'the first year'} and {hi or 'the last year'}.")
+    return out
+
+
 t = read()
 size = np.diff(t["Cumulative"].to_numpy(dtype=float), prepend=0)
-start = year_start(t["Year"], size)
-xlab = year_label(t["Year"], size, start)
-t = t[(t["Year"] >= start).to_numpy()]
+start, end = year_window(t["Year"], size, *year_args())
+xlab = year_label(t["Year"], size, start, end)
+t = t[year_keep(t["Year"], start, end)]
 p = read("05_Life_Cycle_parameters.csv").set_index("Parameter")["Value"]
 fig, ax = plt.subplots(figsize=(10, 5.5))
 ax.plot(t["Year"], t["Cumulative"], color=ORANGE, marker="o", lw=2.5, label="Cumulative documents")

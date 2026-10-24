@@ -79,9 +79,11 @@ Choosing a new file makes the earlier cleaned data "out of date" until you clean
 
 Each sheet is one Python file (`steps/sheets/<Sheet>/<Sheet>.py`) and each plot one more (`<Sheet>_plot.py`); the application copies the script into the project's folder `<Sheet>/` and runs it there with the project's Python,
 so the folder of a project also holds the scripts and results of every sheet. The scripts are readable on their own: a header says what the sheet is, the Excel method it follows, its input and its output.
-Year axes adapt to the data: the plots of production, citations, life cycle and "over time" (sheets 03, 04, 05, 10, 11, 14, 18, 21) draw about 10 round ticks whatever the span, start where
-1% of the papers have been reached (the hidden years and their paper count are named in the axis label) and shade years after the current year as early access. A corpus of 55 years (1972-2027)
-used to print 56 overlapping labels. The helpers (`year_start`, `year_label`, `year_axis`) are a short block inside each of those scripts, because each script must run on its own.
+Year axes adapt to the data and you choose the range. The plots of production, citations, life cycle and "over time" (sheets 03, 04, 05, 11, 14, 18, 21) and the three burst strips draw about 10 round ticks
+whatever the span, shade years after the current year as early access, and by default start where 1% of the papers have been reached (the hidden years and their paper count are named in the axis label).
+On each of those sheet pages the box **Your choices** has **First year drawn** and **Last year drawn** (0 = automatic): type, for example, 1990 and 2025 and generate the plot again. The choice is saved in the project,
+cuts only the picture and never the table, and a reversed range is swapped. The helpers (`year_args`, `year_window`, `year_label`, `year_axis`, `year_rows`) are a short block inside each of those scripts, because each script must run on its own
+(by hand: `python3 03_Annual_Production_plot.py --from-year 1990 --to-year 2025`). Options marked `"for": "plot"` in `app/sheets.py` go to the plot script only; the sheet's data is not made again for them.
 Notes on the January export: 79 papers have no source title (left out of the source sheets) and the export keeps at most 10 references per paper.
 
 ## What the cleaning does

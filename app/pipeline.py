@@ -151,7 +151,7 @@ def run_sheet(project, name, log, _chain=()):
             ok, msg = run_sheet(project, need, log, _chain + (name,))
             if not ok:
                 return False, f"{need} could not be generated: {msg}"
-    args = sheetlist.option_args(project, name) if sheetlist.BY_NAME[name]["options"] else []
+    args = sheetlist.option_args(project, name) if sheetlist.has_data_options(name) else []
     if name == "References":
         raw = project.main_data()
         if raw is None:
@@ -167,12 +167,12 @@ def run_plot(project, name, plot_id, log):
     spec = sheetlist.get(name)
     if spec is None or not any(p["id"] == plot_id for p in spec["plots"]):
         return False, "Unknown plot."
-    if spec["options"] or not sheet_csv(project, name).exists():       # a sheet with options: its data is made again, so the plot follows the saved options
+    if sheetlist.has_data_options(name) or not sheet_csv(project, name).exists():       # a sheet with options: its data is made again, so the plot follows the saved options
         ok, msg = run_sheet(project, name, log)
         if not ok:
             return False, msg
     log(f"=== plot of {name}")
-    ok, msg = _run_script(project, name, f"{name}_plot.py", ["--only", plot_id] if spec.get("per_plot") else [], f"plot of sheet {name}", log, f"{name}_plot_log.txt")
+    ok, msg = _run_script(project, name, f"{name}_plot.py", (["--only", plot_id] if spec.get("per_plot") else []) + sheetlist.option_args(project, name, plot=True), f"plot of sheet {name}", log, f"{name}_plot_log.txt")
     return (ok, f"{spec['title']}: plot generated." if ok else msg)
 
 
