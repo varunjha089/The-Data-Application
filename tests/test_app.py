@@ -143,6 +143,19 @@ class Pieces(unittest.TestCase):
         self.assertGreater(n, 500)
 
 
+class OldPython(unittest.TestCase):
+    def test_no_new_fstring_quotes(self):
+        """the application must run on Python 3.9: an f-string that reuses its own quote inside {} (allowed only from 3.12) stops a script there"""
+        import re
+        same = re.compile(r"""\bf"[^"\n]*\{[^}"\n]*"|\bf'[^'\n]*\{[^}'\n]*'""")
+        bad = []
+        for f in sorted(list(ROOT.glob("app/*.py")) + list(ROOT.glob("steps/**/*.py")) + [ROOT / "the_data_app.py"]):
+            for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+                if same.search(line):
+                    bad.append(f"{f.relative_to(ROOT)}:{i}")
+        self.assertEqual(bad, [])
+
+
 class Server(unittest.TestCase):
     def test_api(self):
         from app import server

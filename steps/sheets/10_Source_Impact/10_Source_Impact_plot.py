@@ -204,7 +204,7 @@ def year_label(years, size, start, label="Year"):
     """axis label that says which early years were left out (and how many papers they hold)"""
     years, size = list(years), np.asarray(size, dtype=float)
     hid = size[[y < start for y in years]]
-    return label if not len(hid) or start <= min(years) else f"{label}   ({min(years)}-{start - 1} not shown: {hid.sum():.0f} {"paper" if hid.sum() == 1 else "papers"}, {100 * hid.sum() / size.sum():.1f}%)"
+    return label if not len(hid) or start <= min(years) else f"{label}   ({min(years)}-{start - 1} not shown: {hid.sum():.0f} {'paper' if hid.sum() == 1 else 'papers'}, {100 * hid.sum() / size.sum():.1f}%)"
 
 
 def year_axis(ax, years, pad=0.6):
