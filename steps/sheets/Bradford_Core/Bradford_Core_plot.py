@@ -1,7 +1,7 @@
 """Plot of the sheet "Bradford_Core": which countries, authors and institutions publish most in the Bradford core sources, and how well those papers are cited.
 Input : Bradford_Core.csv, Bradford_Core_matrix.csv, Bradford_Core_baseline.csv in this folder (run Bradford_Core.py first)
 Output: for each kind (countries, authors, institutions), three pictures (.png and .svg, same folder):
-        core_<kind>_bars        papers in the core sources (blue) and elsewhere (grey), with the share in the core
+        core_<kind>_pyramid     population pyramid: papers in the core sources (left, blue) and in other sources (right, grey), with the share in the core
         core_<kind>_heatmap     papers of each actor in each core source (numbered as in the Bradford plot)
         core_<kind>_cpp         citations per paper outside the core against inside it (only actors with at least 3 papers on each side)
 Run   : python3 Bradford_Core_plot.py [--only core_countries|core_authors|core_institutions]   (needs matplotlib, pandas)
@@ -13,6 +13,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.ticker import FuncFormatter
 
 HERE = Path(__file__).resolve().parent
 BLUE, ORANGE, GREY = "#2F6DB5", "#F28E2B", "#C9CDD2"
@@ -40,16 +41,28 @@ B = pd.read_csv(HERE / "Bradford_Core_baseline.csv", encoding="utf-8-sig").set_i
 TOP = M.groupby("Kind")["Entity"].nunique().max()           # the sheet's --top: the matrix holds exactly that many actors per kind
 
 
-def bars(kind, noun):
+def pyramid(kind, noun):
+    """population pyramid: papers in the core sources to the left, papers in other sources to the right, one shared axis (the counts differ a lot between actors)"""
     t = T[T["Kind"] == kind].head(TOP).iloc[::-1]
-    fig, ax = plt.subplots(figsize=(10, 0.42 * len(t) + 1.9))
-    ax.barh([short(n, 40) for n in t["Name"]], t["Core_Papers"], color=BLUE, label="Papers in the core sources")
-    ax.barh([short(n, 40) for n in t["Name"]], t["Papers"] - t["Core_Papers"], left=t["Core_Papers"], color=GREY, label="Papers in other sources")
-    for i, (p, c, s) in enumerate(zip(t["Papers"], t["Core_Papers"], t["Core_Share_pct"])):
-        ax.text(p + t["Papers"].max() * 0.01, i, f"{s:.0f}% in the core  ({c} of {p})", va="center", fontsize=9)
-    ax.set_xlim(0, t["Papers"].max() * 1.35)
+    names = [short(n, 40) for n in t["Name"]]
+    core, other = t["Core_Papers"].to_numpy(), (t["Papers"] - t["Core_Papers"]).to_numpy()
+    m = max(core.max(), other.max())
+    fig, ax = plt.subplots(figsize=(10.5, 0.42 * len(t) + 2.1))
+    ax.barh(names, -core, color=BLUE, label="Papers in the core sources")
+    ax.barh(names, other, color=GREY, label="Papers in other sources")
+    for i, (c, o) in enumerate(zip(core, other)):
+        ax.text(-c - m * 0.01, i, f"{c}", ha="right", va="center", fontsize=9)
+        ax.text(o + m * 0.01, i, f"{o}", ha="left", va="center", fontsize=9)
+    ax.axvline(0, color="#333", lw=0.8)
+    ax.set_xlim(-m * 1.12, m * 1.12)
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{abs(v):g}"))          # both sides count papers: no minus sign
     ax.set_xlabel("Papers")
     ax.grid(axis="y", visible=False)
+    ax.spines["left"].set_visible(False)
+    ax.tick_params(axis="y", length=0)
+    ax.text(1.02, len(t) - 0.35, "In the core", transform=ax.get_yaxis_transform(), ha="left", va="bottom", fontsize=9, fontweight="bold")
+    for i, sh in enumerate(t["Core_Share_pct"]):
+        ax.text(1.02, i, f"{sh:.0f}%", transform=ax.get_yaxis_transform(), ha="left", va="center", fontsize=9)
     ax.legend(loc="lower right", frameon=False)
     share = B.loc[kind, "Core share %"]
     ax.set_title(f"The {len(t)} {noun} with most papers in the Bradford core sources\n(for all {kind.lower()} together {share:.0f}% of the papers are in the core)", fontsize=12)
@@ -101,7 +114,7 @@ ap.add_argument("--only", choices=sorted(KINDS), help="make only the pictures of
 a = ap.parse_args()
 for pid, (kind, tag, noun) in KINDS.items():
     if a.only in (None, pid):
-        for name, fn in (("bars", bars), ("heatmap", heat), ("cpp", cpp)):
+        for name, fn in (("pyramid", pyramid), ("heatmap", heat), ("cpp", cpp)):
             fig = fn(kind, tag)
             if fig is not None:
                 save(fig, f"core_{tag}_{name}")

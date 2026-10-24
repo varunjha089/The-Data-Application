@@ -71,7 +71,7 @@ Choosing a new file makes the earlier cleaned data "out of date" until you clean
 | Tables | Authors, Affiliations, Countries, References, Author summary |
 | Main information | Main information (plot: documents by type) |
 | Production | Annual production, Average citations per year, Life cycle (plots) |
-| Sources | Top sources (plot), Documents per source, Bradford's law (plot), Bradford core: who publishes there (3 plots per kind: countries, authors, institutions), Source impact (plot), Sources over time (plot) |
+| Sources | Top sources (plot), Documents per source, Bradford's law (plot), Bradford core: who publishes there (3 plots per kind: countries, authors, institutions; the first is a population pyramid, core papers left and other papers right), Source impact (plot), Sources over time (plot) |
 | Authors | Authors over time (plot), Lotka's law (plot), Author impact (plot) |
 | Affiliations | Top affiliations (plot), Affiliations over time (plot) |
 | Countries | Corresponding authors' countries (plot), Countries' production and citations (2 plots), Country collaboration pairs (plot), Country collaboration chord (chord diagram) |
