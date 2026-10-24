@@ -60,6 +60,8 @@ _ROWS = [
      [("world_map_top15", "World map: 15 most productive countries", ["world_map_top15"])]),
     ("Country_Collaboration", "Countries", "Country collaboration", "Joint papers of every pair of countries, and the chord diagram of the six most productive countries and the rest of the world.", ["Countries"],
      [("top_country_pairs", "Country collaboration: pairs with most joint papers", ["top_country_pairs"]), ("chord_diagram", "Country collaboration: chord diagram", ["chord_diagram"])]),
+    ("Topic_Slices", "Documents", "Topic slices and gap audit", "The papers cut by search (Query_IDs): what each slice looks like, what it cites, term trends, and a gap audit (uncertainty AND flood/water mapping). Needs the columns Query_IDs and N_Queries (merged search exports) and a References export.", ["Countries", "References"],
+     []),
     ("23_Top_Cited", "Documents", "Most cited documents", "The 20 most cited documents.", [], [("top_cited", "Most cited documents", ["top_cited"])]),
 ]
 # options the user is asked for (saved in the project; the sheet's data script gets them as arguments): id, label, kind, default, limits, argument
@@ -110,7 +112,7 @@ _EXPLAIN = {"09_Bradford": """<h3>How the core sources are calculated</h3>
 </ul>"""}
 _PER_PLOT = {"10_Source_Impact", "Bradford_Core"}        # the plot script makes only the plot asked for (--only ID)
 _DOWNLOADS = {n: [{"file": f"{n}.html", "label": "Download the HTML page"}] for n in ("Country_Bursts", "Author_Bursts", "Institution_Bursts")}      # extra files a task page offers
-_EXTRA_CSV = {"Country_Bursts": ["Country_Bursts_yearly.csv"], "Author_Bursts": ["Author_Bursts_yearly.csv"], "Institution_Bursts": ["Institution_Bursts_yearly.csv"], "Country_Radar": ["Country_Radar_scaled.csv"], "18_Affil_Over_Time": ["18_Affil_Timeline.csv"], "11_Sources_Over_Time": ["11_Source_Timeline.csv"], "21_Countries_Over_Time": ["21_Country_Timeline.csv"], "Country_Collaboration": ["Country_Collaboration_chord.csv"], "14_Author_Over_Time": ["14_Author_Timeline.csv"], "05_Life_Cycle": ["05_Life_Cycle_parameters.csv"], "09_Bradford": ["09_Bradford_zones.csv"], "Bradford_Core": ["Bradford_Core_baseline.csv", "Bradford_Core_matrix.csv"], "15_Lotka": ["15_Lotka_parameters.csv"]}
+_EXTRA_CSV = {"Country_Bursts": ["Country_Bursts_yearly.csv"], "Author_Bursts": ["Author_Bursts_yearly.csv"], "Institution_Bursts": ["Institution_Bursts_yearly.csv"], "Country_Radar": ["Country_Radar_scaled.csv"], "18_Affil_Over_Time": ["18_Affil_Timeline.csv"], "11_Sources_Over_Time": ["11_Source_Timeline.csv"], "21_Countries_Over_Time": ["21_Country_Timeline.csv"], "Country_Collaboration": ["Country_Collaboration_chord.csv"], "14_Author_Over_Time": ["14_Author_Timeline.csv"], "05_Life_Cycle": ["05_Life_Cycle_parameters.csv"], "09_Bradford": ["09_Bradford_zones.csv"], "Topic_Slices": ["Topic_Slices_top_cited.csv", "Topic_Slices_keywords.csv", "Topic_Slices_top_references.csv", "Topic_Slices_term_trend.csv", "Topic_Slices_gap_audit.csv", "Topic_Slices_reference_audit.csv", "Topic_Slices_report.md"], "Bradford_Core": ["Bradford_Core_baseline.csv", "Bradford_Core_matrix.csv"], "15_Lotka": ["15_Lotka_parameters.csv"]}
 
 SHEETS = [{"name": n, "group": g, "title": t, "what": w, "needs": needs, "csvs": [f"{n}.csv"] + _EXTRA_CSV.get(n, []),
            "options": _OPTIONS.get(n, []), "per_plot": n in _PER_PLOT, "downloads": _DOWNLOADS.get(n, []), "explain": _EXPLAIN.get(n, ""), "plots": [{"id": i, "title": pt, "files": files} for i, pt, files in plots]} for n, g, t, w, needs, plots in _ROWS]

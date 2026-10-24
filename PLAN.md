@@ -82,3 +82,8 @@ A sheet can declare options (`_OPTIONS` in `app/sheets.py`); its page shows them
 - 2026-10-24: sheet "References": if the raw file has no `References` column (export made without the option) the script prints a SKIPPED message and ends normally without writing a table, instead of crashing; `--raw` takes several files (merged by EID, longest reference list wins). The old "at most 10 references per paper" note was about the January export and is removed from the sheet text.
 - 2026-10-24: the reference year 2026 of the workbook formulas gave a division by zero for early-access papers dated 2027 (Author_Summary and Source_Impact m-index, Avg_Citations citable years, Top_Cited TC per year); the divisor is now floored at 1, which changes nothing for years up to 2026.
 
+
+## 2026-10-24: name rules, Query_IDs, Topic_Slices (checked / NOT checked)
+
+Checked: a scratch project on the 3,013-paper merged Scopus file gave 2,831 papers / 44 columns after `--exclude-only-queries Q13`, Affiliations 6,939 rows / 3,624 institutions, Topic_Slices ran, Bradford title 1972-2027, Author_Bursts placeholder with no bursts.
+NOT checked: the window (no UI for `clean_options` yet: CLI only), Windows, Python 3.9 start of the new code, the other sheets after the clean step now keeps 44 columns. Not built: a parent-organisation table (Chinese Academy of Sciences institutes are still separate), institution-to-country fallback, partial-year handling in 05_Life_Cycle.

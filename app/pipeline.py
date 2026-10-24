@@ -26,6 +26,14 @@ def _sha(path):
     return h.hexdigest()
 
 
+def copy_common(project):
+    """steps/common/*.py (the shared name rules) next to the results, so that the scripts of the project run on their own"""
+    dest = project.dir / "common"
+    dest.mkdir(parents=True, exist_ok=True)
+    for f in (STEPS / "common").glob("*.py"):
+        shutil.copy2(f, dest / f.name)
+
+
 def ensure_packages(py, log):
     """make sure the packages the scripts import are in the project's environment; missing ones are downloaded (pip) now"""
     if not envsetup.missing_packages(py):
@@ -40,7 +48,9 @@ def clean_data(project, log):
     if src is None:
         return False, "No main data chosen yet (Settings)."
     py = project.python()
-    cmd = runner.step_command(py, CLEAN_SCRIPT, ["--input", src, "--output", project.clean_file])
+    only = (project.load().get("clean_options") or {}).get("exclude_only_queries") or ""      # e.g. "Q13": papers found only by a noise search are dropped
+    extra = ["--exclude-only-queries", only] if only else []
+    cmd = runner.step_command(py, CLEAN_SCRIPT, ["--input", src, "--output", project.clean_file] + extra)
     if cmd is None:
         return False, "The Python environment is not set up yet (Settings)."
     if not ensure_packages(py, log):
@@ -53,12 +63,13 @@ def clean_data(project, log):
     started = datetime.now()
     t0 = time.time()
     project.clean.mkdir(parents=True, exist_ok=True)
-    both("$ " + " ".join([project.rel(py), "steps/" + CLEAN_SCRIPT, "--input", project.rel(src), "--output", project.rel(project.clean_file)]))
+    both("$ " + " ".join([project.rel(py), "steps/" + CLEAN_SCRIPT, "--input", project.rel(src), "--output", project.rel(project.clean_file)] + extra))
     ok = stream(cmd, both, echo=False) == 0
     if ok:
         project.update(clean_data={"file": project.rel(project.clean_file), "source": (project.load().get("main_data") or {}).get("file"),
                                    "made": started.strftime("%Y-%m-%dT%H:%M:%S")})
         shutil.copy2(STEPS / CLEAN_SCRIPT, project.clean / CLEAN_SCRIPT)      # the exact script that made this result
+        copy_common(project)
     info = project.load().get("main_data") or {}
     head = ["The Data Application: step 1, clean the data",
             f"Project : {project.name}",
@@ -101,6 +112,7 @@ def _run_script(project, name, script, args, title, log, log_name):
     if not ensure_packages(py, log):
         return False, "The missing packages could not be installed (internet connection? see Settings)."
     folder.mkdir(parents=True, exist_ok=True)
+    copy_common(project)
     shutil.copy2(src, folder / script)
     for extra in (STEPS / "sheets" / name).iterdir():                 # files the script reads next to itself (e.g. the map polygons)
         if extra.suffix == ".json":

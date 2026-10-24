@@ -200,3 +200,11 @@ A sheet can declare options (`_OPTIONS` in `app/sheets.py`); its page shows them
 This folder is a git repository (`git log` shows the history of the application's code). Only the application is under git, not the projects or the data.
 
 - 2026-10-23: new tasks "Country bursts", "Author bursts" and "Institution bursts" (CiteSpace-style burst history): Kleinberg burst detection on the yearly paper counts, table + year strip as PNG/SVG + an HTML page in the layout of CiteSpace (offered as a download only). Choices saved: how many to show (10), gamma (0.7, a decimal choice), smallest number of papers (5, authors 4). Checked: on the Country data gamma 0.7 gives the same 10 countries and the same begin and end years as the CiteSpace table (strengths within about 0.4); authors and institutions have no CiteSpace table to compare with. NOT checked: clicking in the window; a burst in the last year only (e.g. an author whose papers are all in 2025) is an edge effect.
+
+## Name rules and the Topic_Slices sheet (added 2026-10-24)
+
+- `steps/common/names.py` holds the country and institution rules (known-country list, aliases, US state + ZIP, institution without departments, one name per spelling). The application copies it into `<project>/common/` before every clean or sheet run.
+- Countries and Affiliations now use these rules; an address with no recognisable country gives no country instead of a wrong one (USA, FRG, "MA 02125" and so on).
+- `01_clean_data.py` keeps `Query_IDs` and `N_Queries` when the data has them. `python3 the_data_app.py clean -p NAME --exclude-only-queries Q13` drops papers returned only by that search (saved in `project.json` as `clean_options`).
+- Sheet `Topic_Slices`: slices by search, term trends, gap audit, reference audit. Needs `Query_IDs` and a References export; the slices are written for one study (edit `SLICES`).
+- The burst plots write a "no burst found" picture instead of failing; the Bradford title shows the years of the data.

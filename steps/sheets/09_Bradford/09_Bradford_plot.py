@@ -130,8 +130,13 @@ ax.set_xlim(-0.08, x_max)
 ax.set_ylim(0, Y_MAX)
 ax.set_xlabel(r'Source $\ln(\mathrm{Rank})$', fontsize=11)
 ax.set_ylabel('Cumulative Number of Articles', fontsize=11)
+try:                                                                       # the years of the data set, not a fixed range
+    _yr = pd.read_csv(HERE.parent / "01_Clean_Data" / "clean_main_data.csv", encoding="utf-8-sig", usecols=["Year"])["Year"].dropna().astype(int)
+    span = f" ({_yr.min()}–{_yr.max()})"
+except (OSError, ValueError, KeyError):
+    span = ""
 ax.set_title(
-    "Bradford's Law — WM-RS Corpus (2016–2025)\n"
+    f"Bradford's Law{span}\n"
     f"$k={k_geom:.2f}$   |   $R^2={r2:.3f}$   |   {n_sources} named sources,  $N_{{\\mathrm{{attr}}}}={N_attr}$",
     fontsize=11, fontweight='bold')
 

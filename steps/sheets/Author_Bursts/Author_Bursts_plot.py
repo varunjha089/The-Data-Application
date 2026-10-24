@@ -16,7 +16,12 @@ PALE, TEAL, RED = "#CFECEC", "#46C7C7", "#E8372C"
 t = pd.read_csv(HERE / "Author_Bursts.csv", encoding="utf-8-sig")
 y = pd.read_csv(HERE / "Author_Bursts_yearly.csv", encoding="utf-8-sig")
 if t.empty:
-    raise SystemExit("No burst was found: try a smaller cost (gamma) or fewer papers needed.")
+    fig, ax = plt.subplots(figsize=(8, 2))
+    ax.axis("off")
+    ax.text(0.5, 0.5, "No burst was found for the authors at this cost (gamma).\nTry a smaller gamma or fewer papers needed.", ha="center", va="center", fontsize=12)
+    for ext in ("png", "svg"):                                             # overwrite the old picture so that it cannot show an earlier result
+        fig.savefig(HERE / f"author_bursts.{ext}", dpi=150, bbox_inches="tight")
+    raise SystemExit(0)
 years = sorted(y["Year"].unique())
 n = len(t)
 

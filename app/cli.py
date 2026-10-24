@@ -121,7 +121,9 @@ def cmd_data(pr, file):
     return 0 if ok else 1
 
 
-def cmd_clean(pr):
+def cmd_clean(pr, exclude_only_queries=None):
+    if exclude_only_queries is not None:                       # saved in the project, so the window uses it too ("" switches it off)
+        pr.update(clean_options={"exclude_only_queries": exclude_only_queries})
     ok, msg = pipeline.clean_data(pr, print)
     print("\n" + msg)
     return 0 if ok else 1
@@ -178,7 +180,8 @@ def main(argv=None):
     e.add_argument("--venv", metavar="PATH", help="use this existing venv (folder or python file)")
     d = with_project(sub.add_parser("data", help="choose the project's main data (a copy is made)"))
     d.add_argument("file", help="the Scopus CSV")
-    with_project(sub.add_parser("clean", help="clean the project's main data"))
+    cl = with_project(sub.add_parser("clean", help="clean the project's main data"))
+    cl.add_argument("--exclude-only-queries", metavar="IDS", default=None, help="comma list of search IDs (e.g. Q13): papers returned only by these searches are dropped; saved in the project; \"\" switches it off")
     sub.add_parser("shortcut", help="make a desktop / applications-menu shortcut that opens the window (Linux, Windows)")
     a = ap.parse_args(argv)
     if a.cmd in (None, "gui"):
@@ -201,4 +204,4 @@ def main(argv=None):
         return cmd_env(pr, a.create, a.venv)
     if a.cmd == "data":
         return cmd_data(pr, a.file)
-    return cmd_clean(pr)
+    return cmd_clean(pr, a.exclude_only_queries)

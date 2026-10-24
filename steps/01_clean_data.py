@@ -31,11 +31,17 @@ from pathlib import Path
 
 import pandas as pd
 
+for _c in (Path(__file__).resolve().parent / "common", Path(__file__).resolve().parent.parent / "common"):      # shared name rules (countries, institutions): in the application, or in the project
+    sys.path.insert(0, str(_c))
+from names import country_of_affiliation
+
 # columns the study keeps (the notes drop seven columns that are empty or not needed); only those present in the export are used
 KEEP = ["Authors", "Author full names", "Author(s) ID", "Title", "Year", "Source title", "Volume", "Issue", "Art. No.", "Page start", "Page end", "Cited by", "DOI",
         "Link", "Affiliations", "Authors with affiliations", "Abstract", "Author Keywords", "Index Keywords", "Funding Details", "Funding Texts", "References",
         "Correspondence Address", "Editors", "Publisher", "Sponsors", "Conference name", "Conference date", "Conference location", "ISSN", "ISBN", "PubMed ID",
-        "Language of Original Document", "Abbreviated Source Title", "Document Type", "Open Access", "Source", "EID"]
+        "Language of Original Document", "Abbreviated Source Title", "Document Type", "Open Access", "Source", "EID",
+        "Query_IDs", "N_Queries"]          # the two columns added by the merge of the search exports: which search returned the paper
+EXCLUDE_ONLY = []                            # set from --exclude-only-queries
 REQUIRED = ["EID", "Title", "Authors", "Year"]
 lines = []                                   # everything printed is also written to clean_report.txt
 
@@ -122,6 +128,11 @@ def clean(src, out):
     d = d[d["Authors"].notna()].copy()
     step("3. records without authors removed", d)
 
+    # 3b. papers returned ONLY by the searches named in --exclude-only-queries (a search known to be noise, e.g. Q13) are removed
+    if EXCLUDE_ONLY and has("Query_IDs"):
+        d = d[~d["Query_IDs"].fillna("").map(lambda q: set(q.split(";")) <= set(EXCLUDE_ONLY))].copy()
+        step(f"3b. papers found only by {','.join(EXCLUDE_ONLY)} removed", d)
+
     # 4. duplicate papers (same title key); the earliest year and the most cited one is kept
     d["Title Key"] = d["Title"].map(lambda t: None if pd.isna(t) else re.sub(r"[^a-z0-9]", "", t.lower()))
     d = d.sort_values(["Year"] + (["Cited by"] if has("Cited by") else []), ascending=[True, False][: 2 if has("Cited by") else 1], kind="stable").drop_duplicates("Title Key")
@@ -147,12 +158,11 @@ def clean(src, out):
             if pd.isna(a):
                 return None
             found = []
-            for part in a.split("; "):
-                if "," in part:
-                    c = part.split(",")[-1].strip()
-                    if c not in found:
-                        found.append(c)
-            return "; ".join(found)
+            for part in a.split("; "):                       # one affiliation; its country must be a known country name (common/names.py)
+                c = country_of_affiliation(part)
+                if c and c not in found:
+                    found.append(c)
+            return "; ".join(found) or None
         d["Countries"] = d["Affiliations"].map(countries)
         d["Country Count"] = d["Countries"].map(lambda c: None if pd.isna(c) else len(c.split("; ")))
         d["Collaboration Type"] = d["Country Count"].map(lambda n: None if pd.isna(n) else ("SCP" if n == 1 else "MCP"))
@@ -163,7 +173,7 @@ def clean(src, out):
             if pd.isna(a):
                 return None
             p = a.split("; ")
-            return None if len(p) < 2 or p[1].startswith("email:") else p[1].split(",")[-1].strip()
+            return None if len(p) < 2 or p[1].startswith("email:") else country_of_affiliation(p[1])
         d["Corresponding Country"] = d["Correspondence Address"].map(corr)
 
     # 9. source title
@@ -228,5 +238,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Clean a Scopus CSV export.")
     ap.add_argument("--input", required=True, help="the Scopus CSV export")
     ap.add_argument("--output", required=True, help="the cleaned CSV to write")
+    ap.add_argument("--exclude-only-queries", default="", help="comma list of search IDs, e.g. Q13: papers returned only by these searches are dropped (needs Query_IDs)")
     a = ap.parse_args()
+    EXCLUDE_ONLY = [q.strip() for q in a.exclude_only_queries.split(",") if q.strip()]
     clean(a.input, a.output)
