@@ -163,11 +163,13 @@ def run_all(project, log, plots=False):
     done = 0
     for spec in sheetlist.SHEETS:
         if plots:
-            if spec["plots"]:
-                ok, msg = run_plot(project, spec["name"], spec["plots"][0]["id"], log)
-                done += ok
-            else:
+            if not spec["plots"]:
                 continue
+            for pl in (spec["plots"] if spec.get("per_plot") else spec["plots"][:1]):         # a script that makes one plot per call is called for each of its plots
+                ok, msg = run_plot(project, spec["name"], pl["id"], log)
+                done += ok
+                if not ok:
+                    break
         else:
             ok, msg = run_sheet(project, spec["name"], log)
             done += ok

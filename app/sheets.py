@@ -19,6 +19,10 @@ _ROWS = [
     ("07_Top_Sources", "Sources", "Top sources", "The most productive sources (journals, books, proceedings).", [], [("top_sources", "Top sources", ["top_sources"])]),
     ("09_Pivot", "Sources", "Documents per source", "The number of documents of every source (the base of Bradford's law).", [], []),
     ("09_Bradford", "Sources", "Bradford's law", "Sources ranked by productivity and divided into three zones.", ["09_Pivot"], [("bradford", "Bradford's law", ["bradford"])]),
+    ("Bradford_Core", "Sources", "Bradford core: who publishes there", "Which countries, authors and institutions publish most in the Bradford core sources, and whether those papers are cited more than their other papers.", ["09_Bradford", "Authors", "Affiliations", "Countries"],
+     [("core_countries", "Countries in the core sources", ["core_countries_bars", "core_countries_heatmap", "core_countries_cpp"]),
+      ("core_authors", "Authors in the core sources", ["core_authors_bars", "core_authors_heatmap", "core_authors_cpp"]),
+      ("core_institutions", "Institutions in the core sources", ["core_institutions_bars", "core_institutions_heatmap", "core_institutions_cpp"])]),
     ("10_Source_Impact", "Sources", "Source impact", "Papers, citations, h, g and m index of every source, and eight ways to see them (choose the plot that tells your story).", [],
      [("source_h_index", "Bars: sources by h-index", ["source_h_index"]),
       ("source_pyramid_papers_vs_cpp", "Pyramid: papers (left) and citations per paper (right)", ["source_pyramid_papers_vs_cpp"]),
@@ -70,6 +74,7 @@ _OPTIONS = {"11_Sources_Over_Time": [
             "21_Countries_Over_Time": [
     {"id": "top_countries", "label": "Number of countries in the heat map and the timeline plot", "kind": "number", "default": 10, "min": 1, "max": 60, "arg": "--top-countries"},
     {"id": "keep_ties", "label": "Also show more countries when they tie with the last one; the number above is then only a minimum", "kind": "check", "default": False, "arg": "--keep-ties", "arg_off": "--cut-ties"}],
+            "Bradford_Core": [{"id": "top", "label": "Number of countries, authors and institutions shown in each picture (those with most papers in the core sources)", "kind": "number", "default": 15, "min": 3, "max": 40, "arg": "--top"}],
             "10_Source_Impact": [{"id": "top_sources", "label": "Number of sources in the plots (those with the highest h-index)", "kind": "number", "default": 15, "min": 3, "max": 60, "arg": "--top-sources"}],
             "Country_Bursts": [
     {"id": "top", "label": "Number of countries shown (those with the strongest bursts)", "kind": "number", "default": 10, "min": 3, "max": 40, "arg": "--top"},
@@ -103,9 +108,9 @@ _EXPLAIN = {"09_Bradford": """<h3>How the core sources are calculated</h3>
 <li><b>Empirical cumulative curve (black line).</b> The real data: for every rank, the documents of that source and of all more productive sources added up. It rises steeply at first (the core gives many documents with few sources) and then more and more slowly.</li>
 <li><b>C(r) = a + b ln(r), R&sup2; (red dashed line).</b> The straight line that fits the curve best when rank is on the logarithmic axis (least squares). <i>C(r)</i> is the cumulative number of documents at rank <i>r</i>; <i>b</i> (the slope) is the number of documents added each time the rank is multiplied by e (about 2.72) and <i>a</i> (the intercept) is where the line cuts the vertical axis at ln(r) = 0. <i>R&sup2;</i> says how well the line fits, from 0 (not at all) to 1 (perfectly): the closer to 1, the better the data follow Bradford's law. The title above the plot repeats k, R&sup2;, the number of sources and the number of documents used.</li>
 </ul>"""}
-_PER_PLOT = {"10_Source_Impact"}        # the plot script makes only the plot asked for (--only ID)
+_PER_PLOT = {"10_Source_Impact", "Bradford_Core"}        # the plot script makes only the plot asked for (--only ID)
 _DOWNLOADS = {n: [{"file": f"{n}.html", "label": "Download the HTML page"}] for n in ("Country_Bursts", "Author_Bursts", "Institution_Bursts")}      # extra files a task page offers
-_EXTRA_CSV = {"Country_Bursts": ["Country_Bursts_yearly.csv"], "Author_Bursts": ["Author_Bursts_yearly.csv"], "Institution_Bursts": ["Institution_Bursts_yearly.csv"], "Country_Radar": ["Country_Radar_scaled.csv"], "18_Affil_Over_Time": ["18_Affil_Timeline.csv"], "11_Sources_Over_Time": ["11_Source_Timeline.csv"], "21_Countries_Over_Time": ["21_Country_Timeline.csv"], "Country_Collaboration": ["Country_Collaboration_chord.csv"], "14_Author_Over_Time": ["14_Author_Timeline.csv"], "05_Life_Cycle": ["05_Life_Cycle_parameters.csv"], "09_Bradford": ["09_Bradford_zones.csv"], "15_Lotka": ["15_Lotka_parameters.csv"]}
+_EXTRA_CSV = {"Country_Bursts": ["Country_Bursts_yearly.csv"], "Author_Bursts": ["Author_Bursts_yearly.csv"], "Institution_Bursts": ["Institution_Bursts_yearly.csv"], "Country_Radar": ["Country_Radar_scaled.csv"], "18_Affil_Over_Time": ["18_Affil_Timeline.csv"], "11_Sources_Over_Time": ["11_Source_Timeline.csv"], "21_Countries_Over_Time": ["21_Country_Timeline.csv"], "Country_Collaboration": ["Country_Collaboration_chord.csv"], "14_Author_Over_Time": ["14_Author_Timeline.csv"], "05_Life_Cycle": ["05_Life_Cycle_parameters.csv"], "09_Bradford": ["09_Bradford_zones.csv"], "Bradford_Core": ["Bradford_Core_baseline.csv", "Bradford_Core_matrix.csv"], "15_Lotka": ["15_Lotka_parameters.csv"]}
 
 SHEETS = [{"name": n, "group": g, "title": t, "what": w, "needs": needs, "csvs": [f"{n}.csv"] + _EXTRA_CSV.get(n, []),
            "options": _OPTIONS.get(n, []), "per_plot": n in _PER_PLOT, "downloads": _DOWNLOADS.get(n, []), "explain": _EXPLAIN.get(n, ""), "plots": [{"id": i, "title": pt, "files": files} for i, pt, files in plots]} for n, g, t, w, needs, plots in _ROWS]
