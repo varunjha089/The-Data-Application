@@ -8,3 +8,5 @@ Backup/
 *.log
 .idea/
 .vscode/
+# the owner's own notes (personal paths, how he pushes): never committed
+*.local.md

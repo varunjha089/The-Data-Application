@@ -1,6 +1,6 @@
 # CLAUDE.md: The Data Application
 
-Standing instructions for working on this folder (`The_Data_Application/`, kept in `Future_Research/Productivity Application/` since 2026-10-24; it was in `College/Power_Query/` before). Read this first, then `PLAN.md` (decisions, what was checked and what was NOT), `README.md` (use) and `FUTURE_PLAN.md` (ideas for later, not built yet).
+Standing instructions for working on this folder (`The_Data_Application/`, the program; a public repository, https://github.com/varunjha089/The-Data-Application). If a `CLAUDE.local.md` exists next to this file, read it too: it holds the owner's own setup (where his projects are, his Python, how he pushes) and is never committed. Read this first, then `PLAN.md` (decisions, what was checked and what was NOT), `README.md` (use) and `FUTURE_PLAN.md` (ideas for later, not built yet).
 
 ## What it is
 
@@ -9,7 +9,7 @@ A standalone, shareable desktop application (a local web server shown in an app 
 ## Standing rules
 
 - **Runs everywhere (macOS, Windows, Linux).** Use `pathlib`/`os.path`, never hard-code `/` or `\\`; the venv python is `bin/python3` or `Scripts/python.exe`; never resolve the symlink of a venv python (`config.rel` keeps the last part as it is); open files with an explicit encoding (`utf-8`, `utf-8-sig`); no shell-only commands in the code. The launchers must stay in step (`run.command` = `run.sh`).
-- **Standalone and shareable.** No path of the author's computer anywhere (no `/Users/...`, no `Power_Query/...`). All paths relative to the folder (`app/paths.py`). The launcher and `app/` use the **standard library only** and must start under Python 3.9 (no `X | None`, no `match`).
+- **Standalone and shareable.** No path of the author's computer anywhere (no `/Users/...`, no folder or study names of the author). All paths relative to the folder (`app/paths.py`). The launcher and `app/` use the **standard library only** and must start under Python 3.9 (no `X | None`, no `match`).
 - **One Python file per step or plot in `steps/`**, readable on its own (header: what it does, input, method, output), taking `--input` / `--output`, needing only what `requirements.txt` lists. The application only calls them (`app/runner.py`); never copy plotting or cleaning logic into `app/`.
 - **Never change the user's original data**; it is copied to the project's `data/raw/`. Never delete the user's files (no delete-project feature on purpose). Outputs go only into the project folder, one folder per step (`01_Clean_Data/`, `02_...`).
 - **Settings belong to a project** (`project.json`, saved at once, relative paths inside the project); only text size, theme, the list of projects and the last project/location are application-wide (`app_config.json` in the user's settings folder, never in the application folder). The application folder must stay free of user data: running the application must not create files in it.
@@ -18,7 +18,7 @@ A standalone, shareable desktop application (a local web server shown in an app 
 - Back up the code before a change: `zip -qr "Backup/$(date +%Y-%m-%d_%H-%M-%S)_<why>.zip" app steps the_data_app.py requirements.txt README.md PLAN.md CLAUDE.md` (`Backup/` is not shared).
 - The user wears spectacles: keep text in the application large and plain. The machine is macOS (BSD `sed`): edit with Python or the Edit tool, not `sed -i`.
 - **Version control: git, for this folder only** (`The_Data_Application/` is the repository; the folder around it is not). After a finished change (a feature, a fix, a doc update that was asked for) that has been checked, commit it: `git add -A && git commit` with a short message that says what changed and why, ending with the attribution lines of the session. One topic per commit; never commit a half-working state. The remote is `origin` = https://github.com/varunjha089/The-Data-Application (public): push only when Varun asks, and never rewrite pushed history. The repository is public: never commit data, tokens, personal paths or names of study projects in code. The `Backup/` zips are no longer needed before a change: git is the history (keep making one only before something large and risky). Never commit user data, `.venv/`, `__pycache__/` or logs (see `.gitignore`); look at `git status` before committing.
-- Python on this machine: `python3` is 3.15 without packages; the packages live in `/opt/homebrew/bin/python3.14`.
+- Python: the launcher and `app/` need only the standard library (3.9+); the scripts of `steps/` and the full test run need pandas, numpy and matplotlib (a project's venv has them). Which Python has them on this computer: `CLAUDE.local.md`.
 
 ## Layout
 
@@ -49,7 +49,7 @@ tests/test_app.py      unittest: fast tests (stdlib) + a full run of the sample 
 requirements.txt       packages for the venvs
 ```
 
-A new sheet or plot = a script in `steps/sheets/<Sheet>/` + an entry in `app/sheets.py`: the menu, the page, the table, the buttons and the routes are generic (`app.js` renderSheet, `server.py` /api/sheets, /api/sheet/*). A new kind of step (like the cleaning) needs a function in `pipeline.py`, a job in `server.py` and a page in `index.html`/`app.js`. `College/Power_Query/Workbook_Sheets` (outside this repository, not moved with it) holds the same scripts for use without the application: keep the two in step (the app copy is the master for the sheet/plot scripts only after they were generated and checked there).
+A new sheet or plot = a script in `steps/sheets/<Sheet>/` + an entry in `app/sheets.py`: the menu, the page, the table, the buttons and the routes are generic (`app.js` renderSheet, `server.py` /api/sheets, /api/sheet/*). A new kind of step (like the cleaning) needs a function in `pipeline.py`, a job in `server.py` and a page in `index.html`/`app.js`.
 
 ## Test without touching anything
 
@@ -59,10 +59,10 @@ Tests must not touch the user's real settings or projects: set `THE_DATA_APP_HOM
 
 ```sh
 S=<scratch>; export THE_DATA_APP_HOME=$S/appdata PYTHONDONTWRITEBYTECODE=1; cd The_Data_Application
-/opt/homebrew/bin/python3.14 the_data_app.py new "Test" --location $S
-/opt/homebrew/bin/python3.14 the_data_app.py env -p Test --create          # or: env -p Test --venv <existing venv>
-/opt/homebrew/bin/python3.14 the_data_app.py data -p Test "<some Scopus csv>"
-/opt/homebrew/bin/python3.14 the_data_app.py clean -p Test && /opt/homebrew/bin/python3.14 the_data_app.py status -p Test
+python3 the_data_app.py new "Test" --location $S
+python3 the_data_app.py env -p Test --create          # or: env -p Test --venv <existing venv>
+python3 the_data_app.py data -p Test "<some Scopus csv>"
+python3 the_data_app.py clean -p Test && python3 the_data_app.py status -p Test
 ```
 
 Test the window without a screen: `python3 the_data_app.py gui --no-window --port 8765` prints a URL with `?key=...`; `curl -c jar "<url>"` then `curl -b jar .../api/projects`, `-X POST -d '{"name":"Test"}' .../api/project/create`, `.../api/status`; add `&tab=settings` to the URL to start on a tab; a headless screenshot: `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --screenshot=out.png --window-size=1180,2300 --virtual-time-budget=6000 "<url>"`. 
