@@ -64,8 +64,9 @@ class App:
         if info:
             data = {"chosen": True, "exists": pr.main_data() is not None, "file": info["file"], "records": info["records"], "copied": info["copied"],
                     "original": info.get("original_path", "")}
-        clean = {"exists": pr.clean_file.exists(), "current": bool(cfg.get("clean_data")) and pr.clean_file.exists(), "made": (cfg.get("clean_data") or {}).get("made"),
-                 "log": pr.clean_log.exists()}
+        wanted = pipeline.clean_exclude(pr)
+        clean = {"exists": pr.clean_file.exists(), "current": bool(cfg.get("clean_data")) and pr.clean_file.exists() and (cfg.get("clean_data") or {}).get("exclude", "") == wanted,
+                 "made": (cfg.get("clean_data") or {}).get("made"), "log": pr.clean_log.exists(), "exclude_only_queries": wanted}
         out["project"] = {"path": str(pr.dir), "name": pr.name, "dir": str(pr.dir), "created": cfg.get("created", ""), "env": env, "data": data, "clean": clean,
                           "steps": sorted(p.name for p in STEPS.glob("*.py"))}
         return out
@@ -405,6 +406,10 @@ def make_handler(app):
                 return self._send(200, {"started": app.job_plot(pr, body.get("name", ""), body.get("plot", ""))})
             if p == "/api/sheets/run_all":
                 return self._send(200, {"started": app.job_all(pr, bool(body.get("plots")))})
+            if p == "/api/clean/options":
+                ids = ",".join(q for q in re.split(r"[,;\s]+", str(body.get("exclude_only_queries", ""))) if q)
+                pr.update(clean_options={"exclude_only_queries": ids})
+                return self._send(200, {"exclude_only_queries": ids})
             if p == "/api/clean":
                 return self._send(200, {"started": app.job_clean(pr)})
             if p == "/api/open":

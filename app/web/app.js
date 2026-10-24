@@ -228,8 +228,9 @@ function renderClean() {
   $("clean-needs").classList.toggle("hidden", !missing.length);
   $("clean-needs").innerHTML = missing.length ? "Before cleaning, set up " + missing.join(" and ") + ' in <b>Settings</b>. <button id="goto-settings">Go to Settings</button>' : "";
   if (missing.length) $("goto-settings").onclick = () => selectPage("settings");
+  if (document.activeElement !== $("clean-exclude")) $("clean-exclude").value = c.exclude_only_queries || "";
   if (c.exists && c.current) { pill("clean-pill", "done", "ok"); $("clean-info").textContent = "Made " + day(c.made) + ". Results and log are in the project's folder 01_Clean_Data."; }
-  else if (c.exists) { pill("clean-pill", "out of date", "warn"); $("clean-info").textContent = "The cleaned file belongs to an earlier main data: clean again."; }
+  else if (c.exists) { pill("clean-pill", "out of date", "warn"); $("clean-info").textContent = "The cleaned file belongs to an earlier main data or to other search settings: clean again."; }
   else { pill("clean-pill", "not done", "warn"); $("clean-info").textContent = ""; }
   $("dl-csv").classList.toggle("hidden", !c.exists);
   $("dl-report").classList.toggle("hidden", !c.exists);
@@ -248,6 +249,12 @@ async function loadResult() {
     $("result").classList.remove("hidden");
   }
 }
+$("clean-exclude").onchange = async () => {
+  const r = await api("/api/clean/options", { exclude_only_queries: $("clean-exclude").value });
+  $("clean-exclude").value = r.exclude_only_queries || "";
+  setMsg("clean-exclude-msg", r.error || "saved: clean the data again to use it", r.error ? "bad" : "ok");
+  await refreshAll();
+};
 $("clean").onclick = () => runJob("/api/clean", {}, "clean-msg");
 $("open-clean").onclick = () => api("/api/open", { which: "clean" });
 

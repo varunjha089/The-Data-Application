@@ -1,6 +1,7 @@
 """The steps of the analysis as functions that the window AND the terminal commands both call.
 Every step writes its results and a LOG of the run into its own folder inside the project (01_Clean_Data/ for step 1), so that what was done can be written about later."""
 import hashlib
+import re
 import shutil
 import subprocess
 import time
@@ -26,6 +27,11 @@ def _sha(path):
     return h.hexdigest()
 
 
+def clean_exclude(project):
+    """the search IDs whose papers are dropped when no other search found them (a setting of the project; empty = keep everything)"""
+    return ",".join(q for q in re.split(r"[,;\s]+", (project.load().get("clean_options") or {}).get("exclude_only_queries") or "") if q)
+
+
 def copy_common(project):
     """steps/common/*.py (the shared name rules) next to the results, so that the scripts of the project run on their own"""
     dest = project.dir / "common"
@@ -48,7 +54,7 @@ def clean_data(project, log):
     if src is None:
         return False, "No main data chosen yet (Settings)."
     py = project.python()
-    only = (project.load().get("clean_options") or {}).get("exclude_only_queries") or ""      # e.g. "Q13": papers found only by a noise search are dropped
+    only = clean_exclude(project)                                # e.g. "Q13": papers found only by a noise search are dropped
     extra = ["--exclude-only-queries", only] if only else []
     cmd = runner.step_command(py, CLEAN_SCRIPT, ["--input", src, "--output", project.clean_file] + extra)
     if cmd is None:
@@ -67,7 +73,7 @@ def clean_data(project, log):
     ok = stream(cmd, both, echo=False) == 0
     if ok:
         project.update(clean_data={"file": project.rel(project.clean_file), "source": (project.load().get("main_data") or {}).get("file"),
-                                   "made": started.strftime("%Y-%m-%dT%H:%M:%S")})
+                                   "made": started.strftime("%Y-%m-%dT%H:%M:%S"), "exclude": only})
         shutil.copy2(STEPS / CLEAN_SCRIPT, project.clean / CLEAN_SCRIPT)      # the exact script that made this result
         copy_common(project)
     info = project.load().get("main_data") or {}

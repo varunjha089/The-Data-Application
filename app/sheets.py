@@ -60,7 +60,7 @@ _ROWS = [
      [("world_map_top15", "World map: 15 most productive countries", ["world_map_top15"])]),
     ("Country_Collaboration", "Countries", "Country collaboration", "Joint papers of every pair of countries, and the chord diagram of the six most productive countries and the rest of the world.", ["Countries"],
      [("top_country_pairs", "Country collaboration: pairs with most joint papers", ["top_country_pairs"]), ("chord_diagram", "Country collaboration: chord diagram", ["chord_diagram"])]),
-    ("Topic_Slices", "Documents", "Topic slices and gap audit", "The papers cut by search (Query_IDs): what each slice looks like, what it cites, term trends, and a gap audit (uncertainty AND flood/water mapping). Needs the columns Query_IDs and N_Queries (merged search exports) and a References export.", ["Countries", "References"],
+    ("Topic_Slices", "Documents", "Topic slices and gap audit", "The papers cut by search (Query_IDs): what each slice looks like, what it cites, term trends, and, if you define it, a gap audit for papers that combine topics. Needs the columns Query_IDs and N_Queries (merged search exports) and a References export. What to cut and look for is set in topic_slices.json in the project folder (written on the first run; edit it).", ["Countries", "References"],
      []),
     ("23_Top_Cited", "Documents", "Most cited documents", "The 20 most cited documents.", [], [("top_cited", "Most cited documents", ["top_cited"])]),
 ]

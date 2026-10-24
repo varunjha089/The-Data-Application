@@ -125,6 +125,9 @@
         <p>Removes duplicates and records without authors, repairs damaged text, builds the country columns, and checks the result. Nothing is written if a check fails.
            The results and a <b>log of the run</b> are saved automatically in the project's folder <code>01_Clean_Data</code>, ready for writing about it.</p>
         <div id="clean-needs" class="notice hidden"></div>
+        <div class="info"><b>Searches to drop</b> (only for data merged from several Scopus searches, which carries a <code>Query_IDs</code> column; otherwise leave empty)<br>
+          <label>Drop papers found only by these search IDs, separated by commas (for example <code>Q13</code>): <input id="clean-exclude" type="text" style="width:14em" placeholder="none"></label>
+          <span id="clean-exclude-msg" class="msg"></span></div>
         <div id="clean-info" class="info"></div>
         <div class="row">
           <button id="clean" class="primary">Clean the data</button>
