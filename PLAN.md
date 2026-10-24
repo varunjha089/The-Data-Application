@@ -110,7 +110,7 @@ Checked (macOS, sample project, 864 papers, and the tests):
   text 140% and the colour-blind palette.
 - In Chrome: Settings (years card, look card), a sheet page (year choice hides/shows the two years, "now: ..." follows), Last 5 / Last 10, the look checkboxes, the country
   fill-in checkbox (the cleaned data becomes "out of date" and back).
-- A fresh clone in a new venv installs from requirements.txt and passes the tests (see the commit of this version).
+- A fresh clone, Python 3.11, a new venv made by the application (`env --create`, packages from requirements.txt): sample, clean, 34 sheets, 36 plots and the 11 tests pass; the clone stays clean (nothing written into the application folder). This test found an f-string in the Source impact plot that only Python 3.12+ accepts; fixed, and a test now guards against it.
 
 NOT checked: Windows and Linux; a real export other than the Watershed one; the real Watershed project has NOT been re-run with 0.3.0 (its plots change when it is:
 year plots follow 2016-2025 unless a sheet says otherwise, the cleaning may fill in some countries). The text-size option can make long labels overlap (e.g. "early access" on the annual production bars at 140%).
