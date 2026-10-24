@@ -14,13 +14,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from . import config, dataset, envsetup, native, pipeline, project as projects, sheets as sheetlist, window
+from . import __version__, config, dataset, envsetup, look, native, pipeline, project as projects, sample, sheets as sheetlist, window, years
 from .jobs import Jobs, stream
 from .paths import REQUIREMENTS, ROOT, STEPS, default_location
 
 WEB = Path(__file__).resolve().parent / "web"
 MIME = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".csv": "text/csv; charset=utf-8",
-        ".txt": "text/plain; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png"}
+        ".txt": "text/plain; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".pdf": "application/pdf", ".tif": "image/tiff", ".json": "application/json"}
 PREVIEW_COLUMNS = ["Title", "Year", "Source title", "Cited by", "Document Type", "Countries", "Collaboration Type"]
 IDLE_SECONDS = 25            # the window pings every few seconds; when it stops (window closed) the application ends
 FIRST_PING_SECONDS = 90      # ... and if the window never opened
@@ -48,7 +48,7 @@ class App:
                 "location": app.get("last_location") or str(default_location())}
 
     def status(self):
-        out = {"ui": config.app_load().get("ui", {}), "folder": str(ROOT), "project": None}
+        out = {"ui": config.app_load().get("ui", {}), "folder": str(ROOT), "version": __version__, "project": None}
         pr = self.project
         if pr is None:
             return out
@@ -64,10 +64,12 @@ class App:
         if info:
             data = {"chosen": True, "exists": pr.main_data() is not None, "file": info["file"], "records": info["records"], "copied": info["copied"],
                     "original": info.get("original_path", "")}
-        wanted = pipeline.clean_exclude(pr)
-        clean = {"exists": pr.clean_file.exists(), "current": bool(cfg.get("clean_data")) and pr.clean_file.exists() and (cfg.get("clean_data") or {}).get("exclude", "") == wanted,
-                 "made": (cfg.get("clean_data") or {}).get("made"), "log": pr.clean_log.exists(), "exclude_only_queries": wanted}
+        wanted, fallback = pipeline.clean_exclude(pr), pipeline.clean_country_fallback(pr)
+        made = cfg.get("clean_data") or {}
+        clean = {"exists": pr.clean_file.exists(), "current": bool(made) and pr.clean_file.exists() and made.get("exclude", "") == wanted and made.get("country_fallback", False) == fallback,
+                 "made": made.get("made"), "log": pr.clean_log.exists(), "exclude_only_queries": wanted, "country_fallback": fallback}
         out["project"] = {"path": str(pr.dir), "name": pr.name, "dir": str(pr.dir), "created": cfg.get("created", ""), "env": env, "data": data, "clean": clean,
+                          "years": years.info(pr), "look": look.get(pr), "look_choices": {"dpi": list(look.DPI), "palettes": look.PALETTES, "limits": look.LIMITS},
                           "steps": sorted(p.name for p in STEPS.glob("*.py"))}
         return out
 
@@ -147,11 +149,21 @@ class App:
             for c in spec["csvs"]:
                 p = pipeline.sheet_csv(pr, spec["name"], c)
                 csvs.append({"file": c, "exists": p.exists(), "rows": self.csv_rows(p) if p.exists() else 0})
-            plots = [{"id": p["id"], "title": p["title"], "files": [{"name": f, "exists": (pr.dir / spec["name"] / f"{f}.png").exists()} for f in p["files"]]} for p in spec["plots"]]
+            plots = [{"id": p["id"], "title": p["title"], "files": [self.plot_file(pr, spec["name"], f) for f in p["files"]]} for p in spec["plots"]]
             out.append({**{k: spec[k] for k in ("name", "group", "title", "what", "needs")}, **st, "csvs": csvs, "plots": plots,
                         "log": (pr.dir / spec["name"] / f"{spec['name']}_log.txt").exists(),
-                        "explain": spec["explain"], "downloads": [{**d, "exists": (pr.dir / spec["name"] / d["file"]).exists()} for d in spec["downloads"]], "options": [{**o, "value": sheetlist.option_values(pr, spec["name"])[o["id"]]} for o in spec["options"]]})
+                        "explain": spec["explain"], "downloads": [{**d, "exists": (pr.dir / spec["name"] / d["file"]).exists()} for d in spec["downloads"]], "options": [{**o, "value": sheetlist.option_values(pr, spec["name"])[o["id"]]} for o in spec["options"]],
+                        "plot_years": sheetlist.plot_years(pr, spec["name"]), "run_info": (pr.dir / spec["name"] / "run_info.json").exists()})
         return {"sheets": out, "groups": sheetlist.GROUPS, "clean_ready": pr.clean_file.exists(), "bookmarks": pr.load().get("bookmarks") or {}}
+
+    @staticmethod
+    def plot_file(pr, name, f):
+        """a picture of a sheet: does its PNG exist, and which extra formats (PDF, TIFF) were written with this PNG (not left over from an earlier look)"""
+        png = pr.dir / name / f"{f}.png"
+        if not png.exists():
+            return {"name": f, "exists": False, "extra": []}
+        t = png.stat().st_mtime
+        return {"name": f, "exists": True, "extra": [ext for ext in ("pdf", "tif") if (pr.dir / name / f"{f}.{ext}").exists() and (pr.dir / name / f"{f}.{ext}").stat().st_mtime >= t - 30]}
 
     def table(self, pr, name, csv_file, page, size):
         spec = sheetlist.get(name)
@@ -290,13 +302,13 @@ def make_handler(app):
                     return self._send(404, {"error": "not found"})
                 fname = Path(parts[1]).name
                 path = pr.dir / parts[0] / fname
-                if path.suffix not in (".png", ".svg", ".csv", ".txt", ".html") or not path.is_file() or (path.suffix == ".html" and not q.get("download")):
+                if path.suffix not in (".png", ".svg", ".pdf", ".tif", ".csv", ".txt", ".html", ".json") or not path.is_file() or (path.suffix in (".html", ".pdf", ".tif") and not q.get("download")):
                     return self._send(404, {"error": "not found"})            # an .html file of a task is only offered as a download, never shown by the application itself
                 extra = {"Content-Disposition": f'attachment; filename="{fname}"'} if q.get("download") else None
                 return self._send(200, path.read_bytes(), MIME.get(path.suffix, "application/octet-stream"), extra)
             if p.startswith("/download/"):
                 name = p[len("/download/"):]
-                path = {"clean_main_data.csv": pr.clean_file, "clean_report.txt": pr.clean_report, "clean_log.txt": pr.clean_log}.get(name) if pr else None
+                path = {"clean_main_data.csv": pr.clean_file, "clean_report.txt": pr.clean_report, "clean_log.txt": pr.clean_log, "run_info.json": pr.clean / "run_info.json"}.get(name) if pr else None
                 if path is None or not path.exists():
                     return self._send(404, {"error": "not found"})
                 return self._send(200, path.read_bytes(), MIME.get(path.suffix, "application/octet-stream"),
@@ -346,7 +358,7 @@ def make_handler(app):
             if p == "/api/browse":
                 path, err = native.browse(body.get("kind", "folder"), body.get("title", "venv"))
                 return self._send(200, {"path": path, "error": err})
-            if p in ("/api/project/create", "/api/project/open", "/api/project/add", "/api/project/forget"):
+            if p in ("/api/project/create", "/api/project/open", "/api/project/add", "/api/project/forget", "/api/project/sample"):
                 if app.busy():
                     return self._send(200, {"ok": False, "message": "A task is still running: wait until it has finished."})
                 if p == "/api/project/forget":                      # off the list only; the folder and its files stay
@@ -354,6 +366,8 @@ def make_handler(app):
                     return self._send(200, {"ok": True})
                 if p == "/api/project/create":
                     target, err = projects.create(body.get("name", ""), body.get("location", ""))
+                elif p == "/api/project/sample":                   # a project with made-up data, to try the application before having an export
+                    target, err = sample.create_sample_project(body.get("location", ""))
                 elif p == "/api/project/add":
                     target, err = projects.add_existing(body.get("path", ""))
                 else:
@@ -407,9 +421,24 @@ def make_handler(app):
             if p == "/api/sheets/run_all":
                 return self._send(200, {"started": app.job_all(pr, bool(body.get("plots")))})
             if p == "/api/clean/options":
-                ids = ",".join(q for q in re.split(r"[,;\s]+", str(body.get("exclude_only_queries", ""))) if q)
-                pr.update(clean_options={"exclude_only_queries": ids})
-                return self._send(200, {"exclude_only_queries": ids})
+                opts = dict(pr.load().get("clean_options") or {})
+                if "exclude_only_queries" in body:
+                    opts["exclude_only_queries"] = ",".join(q for q in re.split(r"[,;\s]+", str(body.get("exclude_only_queries") or "")) if q)
+                if "country_fallback" in body:
+                    opts["country_fallback"] = bool(body["country_fallback"])
+                pr.update(clean_options=opts)
+                return self._send(200, {"exclude_only_queries": pipeline.clean_exclude(pr), "country_fallback": pipeline.clean_country_fallback(pr)})
+            if p == "/api/years":                                     # the years the plots of this project draw
+                try:
+                    if body.get("roll"):
+                        years.roll_forward(pr)
+                    else:
+                        years.set_window(pr, body.get("preset", ""), body.get("from") or 0, body.get("to") or 0)
+                except (ValueError, TypeError) as e:
+                    return self._send(200, {"ok": False, "message": str(e), "years": years.info(pr)})
+                return self._send(200, {"ok": True, "years": years.info(pr)})
+            if p == "/api/look":                                      # the look of this project's plots
+                return self._send(200, {"ok": True, "look": look.save(pr, body.get("values") or {})})
             if p == "/api/clean":
                 return self._send(200, {"started": app.job_clean(pr)})
             if p == "/api/open":

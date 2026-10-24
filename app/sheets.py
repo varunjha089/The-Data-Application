@@ -1,6 +1,10 @@
 """The sheets of the analysis (the sheets of the reference workbook Biblioshiny_Analysis.xlsx): what each one is, what it needs, which plots it has.
 The scripts are in steps/sheets/<Sheet>/<Sheet>.py (data) and <Sheet>_plot.py (plot); the application copies a script into the project's folder <Sheet>/ and runs it there."""
 
+from datetime import date
+
+from . import years as yearwin
+
 # name, group, title, what it is, sheets it needs, plots (id, title, files written)
 _ROWS = [
     ("Authors", "Tables", "Authors", "One row per paper and author (the author is the Scopus Author ID, never the name).", [], []),
@@ -15,14 +19,14 @@ _ROWS = [
     ("Open_Access", "Main information", "Open access status (pie)", "Papers by open access class (Gold, Hybrid Gold, Bronze, Green, Closed / Unknown), as a pie chart.", [], [("open_access_pie", "Open access: pie chart", ["open_access_pie"])]),
     ("03_Annual_Production", "Production", "Annual production", "Documents and total citations per year.", [], [("annual_production", "Annual production", ["annual_production"])]),
     ("04_Avg_Citations", "Production", "Average citations per year", "Mean citations per paper and per year of age.", [], [("average_citations", "Average citations per year", ["average_citations_per_year"])]),
-    ("05_Life_Cycle", "Production", "Life cycle", "Cumulative documents and a fitted logistic (S-shaped) growth curve.", [], [("life_cycle", "Life cycle", ["life_cycle"])]),
+    ("05_Life_Cycle", "Production", "Life cycle", "Cumulative documents and a fitted logistic (S-shaped) growth curve. Incomplete years (the current year and early-access papers) are left out of the fit.", [], [("life_cycle", "Life cycle", ["life_cycle"])]),
     ("07_Top_Sources", "Sources", "Top sources", "The most productive sources (journals, books, proceedings).", [], [("top_sources", "Top sources", ["top_sources"])]),
     ("09_Pivot", "Sources", "Documents per source", "The number of documents of every source (the base of Bradford's law).", [], []),
     ("09_Bradford", "Sources", "Bradford's law", "Sources ranked by productivity and divided into three zones.", ["09_Pivot"], [("bradford", "Bradford's law", ["bradford"])]),
-    ("Bradford_Core", "Sources", "Bradford core: who publishes there", "Which countries, authors and institutions publish most in the Bradford core sources, and whether those papers are cited more than their other papers.", ["09_Bradford", "Authors", "Affiliations", "Countries"],
-     [("core_countries", "Countries in the core sources", ["core_countries_pyramid", "core_countries_heatmap", "core_countries_cpp"]),
-      ("core_authors", "Authors in the core sources", ["core_authors_pyramid", "core_authors_heatmap", "core_authors_cpp"]),
-      ("core_institutions", "Institutions in the core sources", ["core_institutions_pyramid", "core_institutions_heatmap", "core_institutions_cpp"])]),
+    ("Bradford_Core", "Sources", "Bradford core: who publishes there", "Which countries, authors and institutions publish most in the Bradford core sources, and whether those papers are cited more than their other papers (raw citations per paper, and citations compared with papers of the same year, NCS).", ["09_Bradford", "Authors", "Affiliations", "Countries"],
+     [("core_countries", "Countries in the core sources", ["core_countries_pyramid", "core_countries_heatmap", "core_countries_cpp", "core_countries_ncs"]),
+      ("core_authors", "Authors in the core sources", ["core_authors_pyramid", "core_authors_heatmap", "core_authors_cpp", "core_authors_ncs"]),
+      ("core_institutions", "Institutions in the core sources", ["core_institutions_pyramid", "core_institutions_heatmap", "core_institutions_cpp", "core_institutions_ncs"])]),
     ("10_Source_Impact", "Sources", "Source impact", "Papers, citations, h, g and m index of every source, and eight ways to see them (choose the plot that tells your story).", [],
      [("source_h_index", "Bars: sources by h-index", ["source_h_index"]),
       ("source_pyramid_papers_vs_cpp", "Pyramid: papers (left) and citations per paper (right)", ["source_pyramid_papers_vs_cpp"]),
@@ -42,7 +46,7 @@ _ROWS = [
     ("16_Author_Impact", "Authors", "Author impact", "The 20 authors with the highest h-index.", ["Author_Summary"], [("author_h_index", "Authors by h-index", ["author_h_index"])]),
     ("Institution_Bursts", "Affiliations", "Institution bursts", "The institutions with the strongest bursts of publication (CiteSpace-style burst history): table, plot and HTML page.", ["Affiliations"],
      [("institution_bursts", "Institution bursts: strongest bursts of publication", ["institution_bursts"])]),
-    ("17_Top_Affiliations", "Affiliations", "Top affiliations", "The most productive institutions.", ["Affiliations"], [("top_affiliations", "Top affiliations", ["top_affiliations"])]),
+    ("17_Top_Affiliations", "Affiliations", "Top affiliations", "The most productive institutions, or parent organisations (an institute of the Chinese Academy of Sciences, CNRS, CSIC, Max Planck, ... counted with its parent): see Your choices.", ["Affiliations"], [("top_affiliations", "Top affiliations", ["top_affiliations"])]),
     ("18_Affil_Over_Time", "Affiliations", "Affiliations over time", "Cumulative documents of the most productive institutions, and a timeline (bubbles) of the most productive institutions.", ["Affiliations"],
      [("affiliations_over_time", "Affiliations over time: cumulative lines (top 5)", ["affiliations_over_time"]), ("affiliations_timeline", "Affiliations over time: timeline (bubbles)", ["affiliations_timeline"])]),
     ("19_Corr_Countries", "Countries", "Corresponding authors' countries", "Papers by country of the corresponding author: single-country (SCP) and multi-country (MCP).", [],
@@ -94,12 +98,24 @@ _OPTIONS = {"11_Sources_Over_Time": [
             "14_Author_Over_Time": [
     {"id": "top_authors", "label": "Number of authors in the heat map and the timeline plot", "kind": "number", "default": 15, "min": 1, "max": 100, "arg": "--top-authors"},
     {"id": "keep_ties", "label": "Also show more authors when they tie with the last one (same number of papers); the number above is then only a minimum", "kind": "check", "default": False, "arg": "--keep-ties", "arg_off": "--cut-ties"}]}
-# the range of years the plots draw (the tables keep every year); "for": "plot" options go to the plot script, never to the data script
-_YEAR_OPTIONS = [
-    {"id": "year_from", "label": "First year drawn in the plots (0 = automatic: the year where 1% of the papers are reached). Plot only: the table keeps every year.", "kind": "number", "default": 0, "min": 0, "max": 2100, "arg": "--from-year", "for": "plot"},
-    {"id": "year_to", "label": "Last year drawn in the plots (0 = automatic: the last year of the data). Plot only.", "kind": "number", "default": 0, "min": 0, "max": 2100, "arg": "--to-year", "for": "plot"}]
+# the range of years the plots draw (the tables keep every year); "for": "plot" options go to the plot script, never to the data script.
+# "years" says where the range comes from: the project's setting (Settings, "Years in the plots"), all years, or the two years below ("show_if").
+# Sheets whose meaning needs the whole history (production, the life-cycle fit, the burst strips) draw all years unless you choose otherwise.
+YEAR_CHOICES = [("project", "The project's years (Settings)"), ("all", "All years (from the year 1% of the papers is reached)"), ("custom", "The years below")]
+
+
+def _year_options(default):
+    return [{"id": "years", "label": "Years drawn in the plots (plot only: the table keeps every year)", "kind": "select", "choices": YEAR_CHOICES, "default": default, "for": "plot"},
+            {"id": "year_from", "label": "First year (0 = automatic)", "kind": "number", "default": 0, "min": 0, "max": 2100, "for": "plot", "show_if": ["years", "custom"]},
+            {"id": "year_to", "label": "Last year (0 = automatic: the last year of the data)", "kind": "number", "default": 0, "min": 0, "max": 2100, "for": "plot", "show_if": ["years", "custom"]}]
+
+
 for _n in ("03_Annual_Production", "04_Avg_Citations", "05_Life_Cycle", "11_Sources_Over_Time", "14_Author_Over_Time", "18_Affil_Over_Time", "21_Countries_Over_Time", "Author_Bursts", "Country_Bursts", "Institution_Bursts"):
-    _OPTIONS[_n] = _OPTIONS.get(_n, []) + _YEAR_OPTIONS
+    _OPTIONS[_n] = _OPTIONS.get(_n, []) + _year_options("all" if _n in ("03_Annual_Production", "05_Life_Cycle", "Author_Bursts", "Country_Bursts", "Institution_Bursts") else "project")
+_OPTIONS["05_Life_Cycle"].insert(0, {"id": "fit_to", "label": f"Last year used to fit the curve (0 = automatic: the last complete year, now {date.today().year - 1}; later years are still being indexed and would bend the curve down)",
+                                     "kind": "number", "default": 0, "min": 0, "max": 2100, "arg": "--fit-to-year"})
+_OPTIONS["17_Top_Affiliations"] = [{"id": "by", "label": "Count papers by", "kind": "select", "choices": [("institution", "Institution (each institute on its own)"),
+                                    ("parent", "Parent organisation (e.g. the institutes of the Chinese Academy of Sciences together)")], "default": "institution", "arg": "--by"}]
 
 # an explanation shown at the bottom of a task page (HTML), before the Activity box
 _EXPLAIN = {"09_Bradford": """<h3>How the core sources are calculated</h3>
@@ -129,7 +145,9 @@ GROUPS = list(dict.fromkeys(s["group"] for s in SHEETS))
 
 def option_values(project, name):
     """the options of a sheet with the values saved in the project (the defaults where nothing was saved)"""
-    saved = (project.load().get("sheet_options") or {}).get(name, {})
+    saved = dict((project.load().get("sheet_options") or {}).get(name, {}))
+    if "years" not in saved and (saved.get("year_from") or saved.get("year_to")):      # saved before the "years" choice existed: the two years were the choice
+        saved["years"] = "custom"
     out = {}
     for o in BY_NAME[name]["options"]:
         v = saved.get(o["id"], o["default"])
@@ -139,6 +157,8 @@ def option_values(project, name):
                 v = round(v, 2) if o.get("float") else v
             except (TypeError, ValueError):
                 v = o["default"]
+        elif o["kind"] == "select":
+            v = v if v in [c for c, _ in o["choices"]] else o["default"]
         else:
             v = bool(v)
         out[o["id"]] = v
@@ -153,17 +173,34 @@ def save_options(project, name, values):
     return option_values(project, name)
 
 
+def plot_years(project, name):
+    """(first, last) year the sheet's plots draw (0 = automatic), from its "years" choice; None for a sheet without year plots"""
+    v = option_values(project, name)
+    if "years" not in v:
+        return None
+    if v["years"] == "project":
+        w = yearwin.get(project)
+        return w["from"], w["to"]
+    if v["years"] == "custom":
+        return yearwin.resolve("custom", lo=v["year_from"], hi=v["year_to"])
+    return 0, 0
+
+
 def option_args(project, name, plot=False):
     """the command-line arguments for the sheet's data script (plot=False) or for its plot script (plot=True: only the options marked "for": "plot")"""
     args = []
+    values = option_values(project, name)
     for o in BY_NAME[name]["options"]:
-        if (o.get("for") == "plot") != plot:
+        if (o.get("for") == "plot") != plot or not o.get("arg"):
             continue
-        v = option_values(project, name)[o["id"]]
-        if o["kind"] == "number":
+        v = values[o["id"]]
+        if o["kind"] in ("number", "select"):
             args += [o["arg"], str(v)]
         elif (o["arg"] if v else o.get("arg_off")):
             args.append(o["arg"] if v else o["arg_off"])
+    yrs = plot_years(project, name) if plot else None
+    if yrs is not None:
+        args += ["--from-year", str(yrs[0]), "--to-year", str(yrs[1])]
     return args
 
 

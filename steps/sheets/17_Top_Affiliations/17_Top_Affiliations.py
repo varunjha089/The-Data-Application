@@ -1,8 +1,10 @@
 """Sheet "17_Top_Affiliations": the most productive institutions (Biblioshiny "Most Relevant Affiliations").
 Excel: PivotTable on Affiliations, rows = Institution (Top 10 filter on Documents, ties kept), values = count of EID (Documents) and sum of Cited by (Total Citations);
 sorted by Documents. Upper/lower case is ignored. The Grand Total row is not written.
+--by parent counts by Parent Organisation instead (the institutes of the Chinese Academy of Sciences, CNRS, CSIC, ... together; a paper counts once per parent);
+the first column is then called "Parent Organisation" and a column Institutes says how many of its institutes are in the data.
 Input : Affiliations/Affiliations.csv (run Affiliations.py first)        Output: 17_Top_Affiliations.csv
-Run   : python3 17_Top_Affiliations.py
+Run   : python3 17_Top_Affiliations.py [--by institution|parent]
 """
 from pathlib import Path
 
@@ -24,6 +26,7 @@ def write(df, path=OUT):
     print(f"written {path.name}: {len(df)} rows, {df.shape[1]} columns")
 
 
+import argparse
 import unicodedata
 
 
@@ -43,8 +46,20 @@ def top_with_ties(df, col, n):
     return df[df[col] >= cut]
 
 
+ap = argparse.ArgumentParser()
+ap.add_argument("--by", choices=["institution", "parent"], default="institution")
+BY = ap.parse_args().by
 aff = read_csv(SHEETS / "Affiliations" / "Affiliations.csv")
 aff["Institution"] = pivot_labels(aff["Institution"])
-table = aff.groupby("Institution").agg(Documents=("EID", "size"), **{"Total Citations": ("Cited by", "sum")}).reset_index()
-table = table.sort_values(["Documents", "Institution"], ascending=[False, True], kind="stable")
+if BY == "parent":
+    if "Parent Organisation" not in aff.columns:
+        raise SystemExit("Affiliations.csv has no Parent Organisation column: generate the Affiliations sheet again.")
+    aff["Parent Organisation"] = pivot_labels(aff["Parent Organisation"])
+    aff = aff.drop_duplicates(["Parent Organisation", "EID"]).assign(Institutes=aff.groupby("Parent Organisation")["Institution"].transform("nunique"))
+    col = "Parent Organisation"
+    table = aff.groupby(col).agg(Documents=("EID", "size"), **{"Total Citations": ("Cited by", "sum")}, Institutes=("Institutes", "first")).reset_index()
+else:
+    col = "Institution"
+    table = aff.groupby(col).agg(Documents=("EID", "size"), **{"Total Citations": ("Cited by", "sum")}).reset_index()
+table = table.sort_values(["Documents", col], ascending=[False, True], kind="stable")
 write(top_with_ties(table, "Documents", 10).reset_index(drop=True))

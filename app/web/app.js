@@ -41,7 +41,7 @@ async function boot(target) {
   if (ui.font) settings.font = ui.font;
   settings.theme = ui.theme || (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
   applyLook();
-  $("folder").textContent = "Application folder: " + state.folder;
+  $("folder").textContent = "The Data Application " + (state.version || "") + "  |  application folder: " + state.folder;
   if (!state.project) { await renderWelcome(); show("welcome"); return; }
   show("workspace");
   const p = state.project, needSetup = !p.env.can_clean || !p.data.chosen || !p.data.exists;
@@ -88,6 +88,11 @@ $("create").onclick = async () => {
   if (r.ok) { $("new-name").value = ""; setMsg("create-msg", ""); boot("settings"); } else setMsg("create-msg", r.message, "bad");
 };
 $("new-name").onkeydown = (e) => { if (e.key === "Enter") $("create").click(); };
+$("sample").onclick = async () => {
+  setMsg("sample-msg", "Making the sample data ...", "warn");
+  const r = await api("/api/project/sample", { location: $("new-loc").value });
+  if (r.ok) { setMsg("sample-msg", ""); boot("settings"); } else setMsg("sample-msg", r.message, "bad");
+};
 async function addFolder(path) {
   const r = await api("/api/project/add", { path });
   if (r.ok) boot(); else setMsg("open-msg", r.message, "bad");
@@ -144,6 +149,8 @@ function renderOverview() {
   $("ov-notice").classList.toggle("hidden", ready);
   $("ov-notice").innerHTML = ready ? "" : 'The data has not been cleaned yet: do <b>Step 1: Clean the data</b> first. <button id="ov-go-clean">Go to Step 1</button>';
   if (!ready) $("ov-go-clean").onclick = () => selectPage(p.env.can_clean && p.data.exists ? "clean" : "settings");
+  $("ov-years").innerHTML = "<b>Years in the plots:</b> " + esc(yearsText(p.years)) + ' (<a href="#settings" id="ov-go-years">change in Settings</a>)';
+  $("ov-go-years").onclick = (e) => { e.preventDefault(); selectPage("settings"); };
   $("ov-all").disabled = !ready || !p.env.can_clean;
   $("ov-plots").disabled = !ready || !p.env.can_plot;
   $("ov-plots").title = p.env.can_plot ? "" : "The package matplotlib is missing: Settings, Install the missing packages";
@@ -171,7 +178,57 @@ function renderSettings() {
   } else if (d.chosen) { pill("data-pill", "copy missing", "bad"); $("data-info").textContent = "The copy " + d.file + " is gone: choose the file again."; }
   else { pill("data-pill", "none chosen", "warn"); $("data-info").textContent = ""; }
   fillOtherVenvs();
+  renderYears();
+  renderLook();
 }
+function yearsText(y) {
+  if (!y) return "";
+  const range = !y.from && !y.to ? "all years" : (y.from || "start") + "\u2013" + (y.to || "last year");
+  return y.presets[y.preset] + ": " + range;
+}
+function renderYears() {
+  const y = state.project.years;
+  $("years-preset").innerHTML = Object.entries(y.presets).map(([k, label]) => '<option value="' + k + '"' + (k === y.preset ? " selected" : "") + ">" + esc(label) + "</option>").join("");
+  const custom = y.preset === "custom";
+  for (const id of ["years-from", "years-to"]) { $(id).disabled = !custom; }
+  if (document.activeElement !== $("years-from")) $("years-from").value = y.from || "";
+  if (document.activeElement !== $("years-to")) $("years-to").value = y.to || "";
+  pill("years-pill", !y.from && !y.to ? "all years" : (y.from || "start") + "\u2013" + (y.to || "end"), "ok");
+  const bits = ["Chosen on " + esc(y.set_on) + "; it stays the same until you change it."];
+  if (y.data) bits.push("The data has papers from " + y.data[0] + " to " + y.data[1] + ".");
+  if (y.preset === "last10" || y.preset === "last5") bits.push("A complete year is a year that has ended: the current year is still being indexed and early-access papers carry next year's date.");
+  if (y.can_roll) bits.push("<b>Today this choice gives " + y.today[0] + "\u2013" + y.today[1] + ":</b> press Roll forward to use it.");
+  $("years-info").innerHTML = bits.join(" ");
+  $("years-roll").classList.toggle("hidden", !y.can_roll);
+}
+async function saveYears(body) {
+  const r = await api("/api/years", body);
+  state.project.years = r.years;
+  renderYears();
+  setMsg("years-msg", r.ok ? "Saved. Generate the plots again to use it." : r.message, r.ok ? "ok" : "bad");
+}
+$("years-preset").onchange = () => saveYears({ preset: $("years-preset").value, from: Number($("years-from").value) || 0, to: Number($("years-to").value) || 0 });
+$("years-from").onchange = $("years-to").onchange = () => saveYears({ preset: "custom", from: Number($("years-from").value) || 0, to: Number($("years-to").value) || 0 });
+$("years-roll").onclick = () => saveYears({ roll: true });
+function renderLook() {
+  const lk = state.project.look, ch = state.project.look_choices;
+  const pct = (v) => Math.round(v * 100) + "%";
+  const sizes = [0.8, 1, 1.2, 1.4, 1.6, 1.8, 2];
+  const fill = (id, items, cur) => { $(id).innerHTML = items.map(([v, label]) => '<option value="' + v + '"' + (String(v) === String(cur) ? " selected" : "") + ">" + esc(label) + "</option>").join(""); };
+  fill("look-text", sizes.map((v) => [v, pct(v) + (v === 1 ? " (normal)" : "")]), lk.text);
+  fill("look-size", sizes.map((v) => [v, pct(v) + (v === 1 ? " (normal)" : "")]), lk.size);
+  fill("look-dpi", ch.dpi.map((v) => [v, v ? v + " dpi" : "as each plot chooses (150 dpi)"]), lk.dpi);
+  fill("look-palette", Object.entries(ch.palettes), lk.palette);
+  $("look-pdf").checked = lk.pdf; $("look-tiff").checked = lk.tiff;
+  const changed = lk.text !== 1 || lk.size !== 1 || lk.dpi || lk.pdf || lk.tiff || lk.palette !== "standard";
+  pill("look-pill", changed ? "changed" : "standard", changed ? "warn" : "ok");
+}
+for (const id of ["look-text", "look-size", "look-dpi", "look-palette", "look-pdf", "look-tiff"]) $(id).onchange = async () => {
+  const values = { text: Number($("look-text").value), size: Number($("look-size").value), dpi: Number($("look-dpi").value), palette: $("look-palette").value, pdf: $("look-pdf").checked, tiff: $("look-tiff").checked };
+  const r = await api("/api/look", { values });
+  state.project.look = r.look; renderLook();
+  setMsg("look-msg", "Saved. Generate the plots again to see it.", "ok");
+};
 function envMode() { return document.querySelector("input[name=env]:checked").value; }
 document.querySelectorAll("input[name=env]").forEach((r) => r.onchange = () => {
   $("use-box").classList.toggle("hidden", envMode() !== "use");
@@ -229,6 +286,7 @@ function renderClean() {
   $("clean-needs").innerHTML = missing.length ? "Before cleaning, set up " + missing.join(" and ") + ' in <b>Settings</b>. <button id="goto-settings">Go to Settings</button>' : "";
   if (missing.length) $("goto-settings").onclick = () => selectPage("settings");
   if (document.activeElement !== $("clean-exclude")) $("clean-exclude").value = c.exclude_only_queries || "";
+  $("clean-fallback").checked = c.country_fallback !== false;
   if (c.exists && c.current) { pill("clean-pill", "done", "ok"); $("clean-info").textContent = "Made " + day(c.made) + ". Results and log are in the project's folder 01_Clean_Data."; }
   else if (c.exists) { pill("clean-pill", "out of date", "warn"); $("clean-info").textContent = "The cleaned file belongs to an earlier main data or to other search settings: clean again."; }
   else { pill("clean-pill", "not done", "warn"); $("clean-info").textContent = ""; }
@@ -255,6 +313,11 @@ $("clean-exclude").onchange = async () => {
   setMsg("clean-exclude-msg", r.error || "saved: clean the data again to use it", r.error ? "bad" : "ok");
   await refreshAll();
 };
+$("clean-fallback").onchange = async () => {
+  const r = await api("/api/clean/options", { country_fallback: $("clean-fallback").checked });
+  setMsg("clean-fallback-msg", r.error || "saved: clean the data again to use it", r.error ? "bad" : "ok");
+  await refreshAll();
+};
 $("clean").onclick = () => runJob("/api/clean", {}, "clean-msg");
 $("open-clean").onclick = () => api("/api/open", { which: "clean" });
 
@@ -279,16 +342,28 @@ function renderSheet(name) {
   $("sh-run").onclick = () => runJob("/api/sheet/run", { name }, "sh-msg");
   s.options = s.options || [];                      // an older server process sends no options
   $("sh-options").classList.toggle("hidden", !s.options.length);
-  $("sh-options").innerHTML = s.options.length ? "<b>Your choices</b> (saved in this project until you change them)<br>" + s.options.map((o) => "<label>" + esc(o.label) + " " + (o.kind === "number" ?
-    '<input type="number" data-opt="' + esc(o.id) + '" min="' + o.min + '" max="' + o.max + '" step="' + (o.step || 1) + '" value="' + o.value + '" style="width:5em">' :
-    '<input type="checkbox" data-opt="' + esc(o.id) + '"' + (o.value ? " checked" : "") + ">") + "</label>").join("<br>") + ' <span id="sh-opt-msg" class="msg"></span>' : "";
+  const yearsNote = (o) => o.id === "years" && s.plot_years ? " <span class=\"info\">(now: " + (s.plot_years[0] || s.plot_years[1] ? (s.plot_years[0] || "start") + "\u2013" + (s.plot_years[1] || "last year") : "all years") + ")</span>" : "";
+  const control = (o) => o.kind === "number" ?
+    '<input type="number" data-opt="' + esc(o.id) + '" min="' + o.min + '" max="' + o.max + '" step="' + (o.step || 1) + '" value="' + o.value + '" style="width:6em">' :
+    o.kind === "select" ? '<select data-opt="' + esc(o.id) + '">' + o.choices.map(([v, label]) => '<option value="' + esc(v) + '"' + (v === o.value ? " selected" : "") + ">" + esc(label) + "</option>").join("") + "</select>" :
+    '<input type="checkbox" data-opt="' + esc(o.id) + '"' + (o.value ? " checked" : "") + ">";
+  $("sh-options").innerHTML = s.options.length ? "<b>Your choices</b> (saved in this project until you change them)" + s.options.map((o) =>
+    '<label class="opt" data-row="' + esc(o.id) + '">' + esc(o.label) + " " + control(o) + yearsNote(o) + "</label>").join("") + ' <span id="sh-opt-msg" class="msg"></span>' : "";
+  const showRows = () => s.options.forEach((o) => {
+    if (!o.show_if) return;
+    const ctl = document.querySelector('#sh-options [data-opt="' + o.show_if[0] + '"]'), row = document.querySelector('#sh-options [data-row="' + o.id + '"]');
+    if (ctl && row) row.classList.toggle("hidden", ctl.value !== o.show_if[1]);
+  });
+  showRows();
   document.querySelectorAll("#sh-options [data-opt]").forEach((el) => el.onchange = async () => {
     const values = {};
-    document.querySelectorAll("#sh-options [data-opt]").forEach((x) => values[x.dataset.opt] = x.type === "checkbox" ? x.checked : Number(x.value));
+    document.querySelectorAll("#sh-options [data-opt]").forEach((x) => values[x.dataset.opt] = x.type === "checkbox" ? x.checked : (x.tagName === "SELECT" ? x.value : Number(x.value)));
     const r = await api("/api/sheet/options", { name, values });
     s.options.forEach((o) => { if (r.values) o.value = r.values[o.id]; });
     if (r.values) document.querySelectorAll("#sh-options [data-opt]").forEach((x) => { if (x.type === "checkbox") x.checked = r.values[x.dataset.opt]; else x.value = r.values[x.dataset.opt]; });
+    showRows();
     setMsg("sh-opt-msg", r.values ? "saved: generate the data or the plot to use it" : (r.error || "not saved"), r.values ? "ok" : "bad");
+    if (r.values) { sheetsInfo = await api("/api/sheets"); const msg = $("sh-opt-msg").textContent; renderSheet(name); setMsg("sh-opt-msg", msg, "ok"); }
   });
   $("sh-plot-buttons").innerHTML = s.plots.map((pl) => '<button data-plot="' + esc(pl.id) + '"' + (canRun && p.env.can_plot ? "" : " disabled") + ">" +
     (pl.files.every((f) => f.exists) ? "Generate the plot again: " : "Generate plot: ") + esc(pl.title) + "</button>").join(" ");
@@ -297,7 +372,8 @@ function renderSheet(name) {
   $("sh-plots-title").classList.toggle("hidden", !s.plots.some((pl) => pl.files.some((f) => f.exists)));
   $("sh-plots").innerHTML = '<div class="plots">' + s.plots.map((pl) => pl.files.filter((f) => f.exists).map((f) =>
     '<div class="plot"><img src="/files/' + esc(name) + "/" + esc(f.name) + ".png" + stamp + '" alt="' + esc(pl.title) + '"><div class="caption">' + esc(pl.title) +
-    ' &nbsp; <a href="/files/' + esc(name) + "/" + esc(f.name) + '.png?download=1">PNG</a><a href="/files/' + esc(name) + "/" + esc(f.name) + '.svg?download=1">SVG</a></div></div>').join("")).join("") + "</div>";
+    ' &nbsp; <a href="/files/' + esc(name) + "/" + esc(f.name) + '.png?download=1">PNG</a><a href="/files/' + esc(name) + "/" + esc(f.name) + '.svg?download=1">SVG</a>' +
+    (f.extra || []).map((x) => '<a href="/files/' + esc(name) + "/" + esc(f.name) + "." + x + '?download=1">' + (x === "tif" ? "TIFF" : x.toUpperCase()) + "</a>").join("") + "</div></div>").join("")).join("") + "</div>";
   $("sh-explain").classList.toggle("hidden", !s.explain);
   $("sh-explain").innerHTML = s.explain || "";
   const first = s.csvs[0];
@@ -306,6 +382,8 @@ function renderSheet(name) {
   $("sh-downloads").innerHTML = (s.downloads || []).filter((d) => d.exists).map((d) => '<a class="button" href="/files/' + esc(name) + "/" + esc(d.file) + '?download=1">' + esc(d.label) + "</a>").join(" ");
   $("sh-dl-log").classList.toggle("hidden", !s.log);
   $("sh-dl-log").href = "/files/" + name + "/" + name + "_log.txt?download=1";
+  $("sh-dl-info").classList.toggle("hidden", !s.run_info);
+  $("sh-dl-info").href = "/files/" + name + "/run_info.json?download=1";
   $("sh-folder").classList.toggle("hidden", !s.done);
   $("sh-folder").onclick = () => api("/api/open", { sheet: name });
   $("sh-data").classList.toggle("hidden", !s.done);

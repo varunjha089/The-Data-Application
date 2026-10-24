@@ -4,6 +4,7 @@ Output: for each kind (countries, authors, institutions), three pictures (.png a
         core_<kind>_pyramid     population pyramid: papers in the core sources (left, blue) and in other sources (right, grey), with the share in the core
         core_<kind>_heatmap     papers of each actor in each core source (numbered as in the Bradford plot)
         core_<kind>_cpp         citations per paper outside the core against inside it (only actors with at least 3 papers on each side)
+        core_<kind>_ncs         the same corrected for age: normalised citation score (1 = cited like the average paper of the same year), core against outside
 Run   : python3 Bradford_Core_plot.py [--only core_countries|core_authors|core_institutions]   (needs matplotlib, pandas)
 """
 import argparse
@@ -109,12 +110,36 @@ def cpp(kind, noun):
     return fig
 
 
+def ncs(kind, noun):
+    """citations corrected for age: the actor's papers against the average paper of the same year (1), core papers against the others"""
+    t = T[(T["Kind"] == kind) & (T["Core_Papers"] >= MIN_SIDE) & (T["Papers"] - T["Core_Papers"] >= MIN_SIDE)].head(TOP).iloc[::-1]
+    if "NCS_core" not in T.columns or t.empty:
+        print(f"{kind}: no actor has {MIN_SIDE} papers on each side (or the data has no NCS columns); age-corrected picture skipped")
+        return None
+    fig, ax = plt.subplots(figsize=(10, 0.42 * len(t) + 2.3))
+    y = range(len(t))
+    ax.axvline(1, color="#555555", lw=1, ls="--", zorder=0)
+    ax.text(1, len(t) - 0.4, " average paper of the same year", fontsize=9, color="#555555", va="bottom")
+    ax.hlines(y, t["NCS_outside"], t["NCS_core"], color="#B9BEC4", lw=2, zorder=1)
+    ax.scatter(t["NCS_outside"], y, s=70, color=GREY, edgecolor="#6B7078", zorder=2, label="Papers in other sources")
+    ax.scatter(t["NCS_core"], y, s=70, color=BLUE, edgecolor="white", zorder=3, label="Papers in the core sources")
+    ax.set_yticks(list(y), [short(n, 40) for n in t["Name"]])
+    ax.set_ylim(-0.7, len(t) + 0.3)
+    ax.grid(axis="y", visible=False)
+    ax.set_xlabel("Normalised citation score (citations / mean citations of the papers of the same year)")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=2, frameon=False, fontsize=10)
+    b = B.loc[kind]
+    extra = f"\nWhole corpus: {b['NCS core']:.2f} in the core, {b['NCS outside']:.2f} outside" if "NCS core" in B.columns else ""
+    ax.set_title(f"Are the core papers cited more, for their age? ({len(t)} {noun}){extra}", fontsize=12)
+    return fig
+
+
 ap = argparse.ArgumentParser()
 ap.add_argument("--only", choices=sorted(KINDS), help="make only the pictures of this kind")
 a = ap.parse_args()
 for pid, (kind, tag, noun) in KINDS.items():
     if a.only in (None, pid):
-        for name, fn in (("pyramid", pyramid), ("heatmap", heat), ("cpp", cpp)):
+        for name, fn in (("pyramid", pyramid), ("heatmap", heat), ("cpp", cpp), ("ncs", ncs)):
             fig = fn(kind, tag)
             if fig is not None:
                 save(fig, f"core_{tag}_{name}")

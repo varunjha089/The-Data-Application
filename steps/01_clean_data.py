@@ -15,8 +15,10 @@ file agree. Two general steps come first and a list of checks runs at the end.
   4. remove duplicate papers: same Title Key (title in lower case, letters and digits only); keep the earliest year, then the most cited
   5. keywords: lower case, "-" and "_" become spaces, then trimmed
   6. affiliations / correspondence address: "& amp;" -> "&", Türkiye -> Turkey, Viet Nam -> Vietnam, "UPMC Univ. Paris 06;" -> "UPMC Univ. Paris 06, France;"
-  7. Countries (distinct country of each affiliation, in order), Country Count, Collaboration Type (SCP = 1 country, MCP = 2 or more)
-  8. Corresponding Country (from Correspondence Address)
+  7. Countries (distinct country of each affiliation, in order), Country Count, Collaboration Type (SCP = 1 country, MCP = 2 or more).
+     An address written without its country gets the country of the same institution elsewhere in this data, when at least 2 and 2/3 of that
+     institution's addresses name the same country (switch off with --no-country-fallback); the table used is written to institution_countries.csv
+  8. Corresponding Country (from Correspondence Address, with the same fallback)
   9. Source title: remove "(Switzerland)", trim
   C. checks: unique EID and title, no missing EID / Authors / Title / Year, plausible years, Cited by >= 0, Countries agree with Country Count
 
@@ -33,7 +35,7 @@ import pandas as pd
 
 for _c in (Path(__file__).resolve().parent / "common", Path(__file__).resolve().parent.parent / "common"):      # shared name rules (countries, institutions): in the application, or in the project
     sys.path.insert(0, str(_c))
-from names import country_of_affiliation
+from names import country_of_affiliation, country_with_fallback, learn_institution_countries
 
 # columns the study keeps (the notes drop seven columns that are empty or not needed); only those present in the export are used
 KEEP = ["Authors", "Author full names", "Author(s) ID", "Title", "Year", "Source title", "Volume", "Issue", "Art. No.", "Page start", "Page end", "Cited by", "DOI",
@@ -42,6 +44,7 @@ KEEP = ["Authors", "Author full names", "Author(s) ID", "Title", "Year", "Source
         "Language of Original Document", "Abbreviated Source Title", "Document Type", "Open Access", "Source", "EID",
         "Query_IDs", "N_Queries"]          # the two columns added by the merge of the search exports: which search returned the paper
 EXCLUDE_ONLY = []                            # set from --exclude-only-queries
+COUNTRY_FALLBACK = True                      # off with --no-country-fallback
 REQUIRED = ["EID", "Title", "Authors", "Year"]
 lines = []                                   # everything printed is also written to clean_report.txt
 
@@ -153,13 +156,19 @@ def clean(src, out):
             d[c] = d[c].map(lambda v: None if pd.isna(v) else v.replace("UPMC Univ. Paris 06;", "UPMC Univ. Paris 06, France;"))
 
     # 7. countries
+    learned, filled = {}, []
+    if has("Affiliations") and COUNTRY_FALLBACK:
+        parts = [x for a in d["Affiliations"].dropna() for x in a.split("; ")]
+        learned = learn_institution_countries(parts)
     if has("Affiliations"):
         def countries(a):
             if pd.isna(a):
                 return None
             found = []
             for part in a.split("; "):                       # one affiliation; its country must be a known country name (common/names.py)
-                c = country_of_affiliation(part)
+                c, how = country_with_fallback(part, learned)
+                if how == "institution":
+                    filled.append(part)
                 if c and c not in found:
                     found.append(c)
             return "; ".join(found) or None
@@ -173,7 +182,7 @@ def clean(src, out):
             if pd.isna(a):
                 return None
             p = a.split("; ")
-            return None if len(p) < 2 or p[1].startswith("email:") else country_of_affiliation(p[1])
+            return None if len(p) < 2 or p[1].startswith("email:") else country_with_fallback(p[1], learned)[0]
         d["Corresponding Country"] = d["Correspondence Address"].map(corr)
 
     # 9. source title
@@ -226,8 +235,21 @@ def clean(src, out):
     if has("Reference Count"):
         say(f"  references per paper: at most {int(d['Reference Count'].max())}")
 
+    if has("Affiliations"):
+        if COUNTRY_FALLBACK:
+            say(f"  addresses without a country that got one from the same institution elsewhere in the data: {len(filled)} "
+                f"({len(set(filled))} different; {len(learned)} institutions have a known country, see institution_countries.csv)")
+        else:
+            say("  a missing country is NOT taken from the same institution elsewhere (switched off)")
+
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
+    table = out.parent / "institution_countries.csv"
+    if learned:
+        pd.DataFrame([(name, key, c, n) for key, (c, name, n) in sorted(learned.items(), key=lambda kv: kv[1][1].lower())],
+                     columns=["Institution", "Key", "Country", "Addresses naming it"]).to_csv(table, index=False, encoding="utf-8-sig")
+    elif table.exists():
+        table.unlink()                                       # switched off: an old table must not be used by the Affiliations sheet
     d.to_csv(out, index=False, encoding="utf-8-sig")
     say("")
     say(f"written {out.name}: {len(d)} papers, {d.shape[1]} columns")
@@ -239,6 +261,8 @@ if __name__ == "__main__":
     ap.add_argument("--input", required=True, help="the Scopus CSV export")
     ap.add_argument("--output", required=True, help="the cleaned CSV to write")
     ap.add_argument("--exclude-only-queries", default="", help="comma list of search IDs, e.g. Q13: papers returned only by these searches are dropped (needs Query_IDs)")
+    ap.add_argument("--no-country-fallback", action="store_true", help="do not give an address without a country the country of the same institution elsewhere in the data")
     a = ap.parse_args()
     EXCLUDE_ONLY = [q.strip() for q in a.exclude_only_queries.split(",") if q.strip()]
+    COUNTRY_FALLBACK = not a.no_country_fallback
     clean(a.input, a.output)

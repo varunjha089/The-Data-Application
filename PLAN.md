@@ -91,3 +91,26 @@ NOT checked: the window (no UI for `clean_options` yet: CLI only), Windows, Pyth
 **2026-10-24, standalone rule:** nothing study-specific stays in the application's source. `Topic_Slices` now reads its slices, term trend, audit and literature from `topic_slices.json` in the project folder (written with automatic choices on the first run; the Watershed definition is kept as an example and gives byte-identical CSVs), and the search IDs to drop at cleaning are a setting on the Clean page (`clean_options` in `project.json`). Checked on a scratch project: old and new Topic_Slices CSVs identical with the example file; the endpoint saves and normalises the IDs; saving marks the cleaned file out of date and cleaning makes it current again. NOT checked: the new box in a browser window (JavaScript syntax only).
 
 **2026-10-24, year range and Bradford:** plot-only options (`"for": "plot"`) `--from-year/--to-year` on 10 sheets (03, 04, 05, 11, 14, 18, 21 and the three burst sheets); automatic = 1% year to last year. Bradford: the curve legend moved to the lower right (the cumulative curve only rises, so it is always empty there) and the core list font shrinks above 18 sources. Checked on a scratch project (explicit ranges, a reversed range, burst strip, defaults, all 34 sheets / 36 plots); NOT checked: the new inputs in a browser window, and a core with more than 18 sources.
+
+## 2026-10-24: version 0.3.0 (checked / NOT checked)
+
+Decisions:
+- Years in the plots are a **project** setting with presets; the resolved years are saved (`year_window` in project.json), never recomputed silently; a sheet chooses
+  project / all / custom (`years`, `year_from`, `year_to` in its options; old projects with saved year_from/year_to become "custom"). Sheets whose meaning needs the whole
+  history (03, 05, the three burst sheets) default to all years. "Complete year" = the calendar year before today, capped at the last year of the data.
+- The plot look is applied by a wrapper (`steps/common/plotlook.py`) around matplotlib's `Figure.savefig`, so the 27 plot scripts stay unchanged and runnable on their own.
+- The country fallback is learned from the data itself (no country table to maintain): 2+ addresses and a 2/3 majority. It is done in the cleaning (so Countries, SCP/MCP and
+  the corresponding country use it) and repeated in Affiliations from the table the cleaning wrote.
+- Parent organisations are a short, documented list of large multi-institute bodies, matched on one comma part of the address; a university that only carries the name is not a member.
+- Bradford core quality: the age-normalised citation score (per year of publication, within the data) rather than raw citations; still attention, not quality.
+
+Checked (macOS, sample project, 864 papers, and the tests):
+- `python -m unittest discover -s tests` passes: 10 tests, including the full run (clean, 34 sheets, 36 plots, run records, life-cycle In Fit, PDF/TIFF, parent counting, a plain-words failure).
+- The plots that changed were viewed: life cycle with hollow incomplete years, average citations on 2016-2025, the NCS dumbbell, top affiliations by parent, annual production with
+  text 140% and the colour-blind palette.
+- In Chrome: Settings (years card, look card), a sheet page (year choice hides/shows the two years, "now: ..." follows), Last 5 / Last 10, the look checkboxes, the country
+  fill-in checkbox (the cleaned data becomes "out of date" and back).
+- A fresh clone in a new venv installs from requirements.txt and passes the tests (see the commit of this version).
+
+NOT checked: Windows and Linux; a real export other than the Watershed one; the real Watershed project has NOT been re-run with 0.3.0 (its plots change when it is:
+year plots follow 2016-2025 unless a sheet says otherwise, the cleaning may fill in some countries). The text-size option can make long labels overlap (e.g. "early access" on the annual production bars at 140%).

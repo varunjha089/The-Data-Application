@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import config, dataset, envsetup, pipeline
+from . import __version__, config, dataset, envsetup, pipeline, sample, years
 from . import project as projects
 from .paths import ROOT, STEPS
 
@@ -123,8 +123,39 @@ def cmd_data(pr, file):
 
 def cmd_clean(pr, exclude_only_queries=None):
     if exclude_only_queries is not None:                       # saved in the project, so the window uses it too ("" switches it off)
-        pr.update(clean_options={"exclude_only_queries": exclude_only_queries})
+        pr.update(clean_options={**(pr.load().get("clean_options") or {}), "exclude_only_queries": exclude_only_queries})
     ok, msg = pipeline.clean_data(pr, print)
+    print("\n" + msg)
+    return 0 if ok else 1
+
+
+def cmd_sample(location):
+    pr, err = sample.create_sample_project(location)
+    if pr is None:
+        print(err)
+        return 1
+    pr.touch()
+    print(f"Project '{pr.name}' created in {pr.dir} with a made-up Scopus export ({pr.load()['main_data']['records']} records).")
+    print(f"Next: python3 the_data_app.py env -p \"{pr.name}\" --create   (or open it in the window)")
+    return 0
+
+
+def cmd_years(pr, preset, first, last, roll):
+    try:
+        if roll:
+            years.roll_forward(pr)
+        elif preset:
+            years.set_window(pr, preset, first or 0, last or 0)
+    except ValueError as e:
+        print(e)
+        return 1
+    w = years.info(pr)
+    print(f"Years in the plots: {years.PRESETS[w['preset']]}: {years.text(w)} (set on {w['set_on']})" + (f"; rolled forward it would be {w['today'][0]}-{w['today'][1]}" if w["can_roll"] else ""))
+    return 0
+
+
+def cmd_run(pr, plots):
+    ok, msg = pipeline.run_all(pr, print, plots)
     print("\n" + msg)
     return 0 if ok else 1
 
@@ -160,6 +191,7 @@ def main(argv=None):
         except (AttributeError, ValueError):
             pass
     ap = argparse.ArgumentParser(prog="the_data_app.py", description="The Data Application: without a command the window opens.")
+    ap.add_argument("--version", action="version", version=f"The Data Application {__version__}")
     sub = ap.add_subparsers(dest="cmd")
 
     def with_project(p):
@@ -182,6 +214,15 @@ def main(argv=None):
     d.add_argument("file", help="the Scopus CSV")
     cl = with_project(sub.add_parser("clean", help="clean the project's main data"))
     cl.add_argument("--exclude-only-queries", metavar="IDS", default=None, help="comma list of search IDs (e.g. Q13): papers returned only by these searches are dropped; saved in the project; \"\" switches it off")
+    sm = sub.add_parser("sample", help="create a project with a made-up Scopus export, to try the application")
+    sm.add_argument("--location", metavar="FOLDER", help="folder in which the project folder is created (default: Documents)")
+    y = with_project(sub.add_parser("years", help="show or set the years the plots draw (the whole project)"))
+    y.add_argument("preset", nargs="?", choices=sorted(years.PRESETS), help="last10, last5, all or custom")
+    y.add_argument("--from", dest="first", type=int, help="first year (custom)")
+    y.add_argument("--to", dest="last", type=int, help="last year (custom)")
+    y.add_argument("--roll-forward", action="store_true", help="work the preset out again for today")
+    r = with_project(sub.add_parser("run", help="generate the data of every sheet (or, with --plots, every plot)"))
+    r.add_argument("--plots", action="store_true")
     sub.add_parser("shortcut", help="make a desktop / applications-menu shortcut that opens the window (Linux, Windows)")
     a = ap.parse_args(argv)
     if a.cmd in (None, "gui"):
@@ -195,6 +236,8 @@ def main(argv=None):
         return cmd_add(a.path)
     if a.cmd == "shortcut":
         return make_shortcut()
+    if a.cmd == "sample":
+        return cmd_sample(a.location)
     pr = pick_project(a.project)
     if pr is None:
         return 1
@@ -204,4 +247,8 @@ def main(argv=None):
         return cmd_env(pr, a.create, a.venv)
     if a.cmd == "data":
         return cmd_data(pr, a.file)
+    if a.cmd == "years":
+        return cmd_years(pr, a.preset, a.first, a.last, a.roll_forward)
+    if a.cmd == "run":
+        return cmd_run(pr, a.plots)
     return cmd_clean(pr, a.exclude_only_queries)

@@ -108,12 +108,16 @@ t = t[year_keep(t["Year"], start, end)]
 p = read("05_Life_Cycle_parameters.csv").set_index("Parameter")["Value"]
 fig, ax = plt.subplots(figsize=(10, 5.5))
 ax.plot(t["Year"], t["Cumulative"], color=ORANGE, marker="o", lw=2.5, label="Cumulative documents")
+if "In Fit" in t.columns and (t["In Fit"] == "no").any():          # incomplete years: drawn hollow, not used in the fit
+    out = t[t["In Fit"] == "no"]
+    ax.plot(out["Year"], out["Cumulative"], ls="none", marker="o", ms=9, mfc="white", mec=ORANGE, mew=2, label="Not used in the fit (incomplete year)")
 ax.plot(t["Year"], t["Fitted"], color=GREY, marker="o", lw=2, ls="--", label="Fitted logistic curve")
 year_axis(ax, t["Year"])
 ax.set_xlabel(xlab)
 ax.set_ylabel("Cumulative documents")
-ax.legend(frameon=False, loc="upper left")
-ax.text(0.02, 0.70, f"K = {p['k']:.0f}   r = {p['r']:.3f}   t0 = {p['t0']:.1f}\nR2 = {p['R2']:.4f}\npeak output = {p['Peak annual output']:.0f} per year\n90% of K reached in {p['Year 90% of K is reached']:.1f}",
+ax.legend(frameon=False, loc="center left", bbox_to_anchor=(0.01, 0.45))            # the middle left is empty: the curve is low there and the numbers are above
+fit = f"\nfit on the years up to {int(p['Last year in the fit'])}" if "Last year in the fit" in p.index else ""
+ax.text(0.02, 0.96, f"K = {p['k']:.0f}   r = {p['r']:.3f}   t0 = {p['t0']:.1f}\nR2 = {p['R2']:.4f}\npeak output = {p['Peak annual output']:.0f} per year\n90% of K reached in {p['Year 90% of K is reached']:.1f}{fit}",
         transform=ax.transAxes, va="top", fontsize=11)
 ax.set_title("Life cycle of scientific production")
 save(fig, "life_cycle")

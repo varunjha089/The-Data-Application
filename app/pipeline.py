@@ -1,13 +1,15 @@
 """The steps of the analysis as functions that the window AND the terminal commands both call.
 Every step writes its results and a LOG of the run into its own folder inside the project (01_Clean_Data/ for step 1), so that what was done can be written about later."""
 import hashlib
+import json
 import re
 import shutil
 import subprocess
 import time
 from datetime import datetime
+from pathlib import Path
 
-from . import envsetup, runner
+from . import __version__, envsetup, look, runner, years
 from .jobs import stream
 from .paths import STEPS
 
@@ -19,12 +21,76 @@ def _versions(py):
     return r.stdout.strip() if r.returncode == 0 else "unknown"
 
 
+_sha_cache = {}
+
+
 def _sha(path):
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    """SHA-256 of a file (remembered while the file is unchanged: the cleaned data is hashed once, not for every sheet)"""
+    st = Path(path).stat()
+    key = (str(path), st.st_mtime, st.st_size)
+    if key not in _sha_cache:
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        _sha_cache[key] = h.hexdigest()
+    return _sha_cache[key]
+
+
+# what a failed script means, in plain words (the full traceback stays in the log)
+_HINTS = [
+    (r"KeyError: '([^']+)'", "The column or item '{0}' is missing. If it is a Scopus column, export the data again from Scopus with all information fields ticked "
+                             "(citation, bibliographical, abstract and keywords, funding, other information, and References when you need them)."),
+    (r"No module named '([^']+)'", "The package '{0}' is not installed in the project's Python: Settings, Install the missing packages."),
+    (r"FileNotFoundError: .*'([^']+)'", "The file {0} is missing: generate the sheets this one needs first (Overview, Generate all data)."),
+    (r"PermissionError: .*'([^']+)'", "{0} cannot be written: is it open in Excel or another program? Close it and try again."),
+    (r"UnicodeDecodeError", "A file is not UTF-8 text. Export the data from Scopus again as CSV (do not open and save it in Excel first)."),
+    (r"MemoryError", "The computer ran out of memory: close other programs, or use a smaller export."),
+]
+
+
+def explain_failure(lines):
+    """the last error line of a script's output and, when it is a known one, what to do about it"""
+    text = [str(x).strip() for x in lines if str(x).strip() and not str(x).startswith("$ ")]
+    if not text:
+        return "The script stopped without a message."
+    last = text[-1]
+    for pattern, hint in _HINTS:
+        m = re.search(pattern, last)
+        if m:
+            return f"{last}. {hint.format(*(Path(g).name for g in m.groups()))}"
+    return last if len(last) < 300 else last[:297] + "..."
+
+
+def write_run_info(folder, section, info):
+    """<folder>/run_info.json: what made the files of this folder (application version, script and its SHA-256, arguments, input SHA-256, settings, software),
+    one entry per data run and per plot, so that every figure can be traced and made again"""
+    f = Path(folder) / "run_info.json"
+    try:
+        cur = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+    except ValueError:
+        cur = {}
+    cur["application"] = f"The Data Application {__version__}"
+    keys = section.split("/")
+    node = cur
+    for k in keys[:-1]:
+        node = node.setdefault(k, {})
+    node[keys[-1]] = info
+    f.write_text(json.dumps(cur, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def _inputs(project, files):
+    out = []
+    for p in files:
+        p = Path(p)
+        if p.exists():
+            out.append({"file": project.rel(p), "sha256": _sha(p)})
+    return out
+
+
+def clean_country_fallback(project):
+    """fill in a missing country from the same institution elsewhere in the data (a setting of the project; on unless switched off)"""
+    return (project.load().get("clean_options") or {}).get("country_fallback", True) is not False
 
 
 def clean_exclude(project):
@@ -55,7 +121,8 @@ def clean_data(project, log):
         return False, "No main data chosen yet (Settings)."
     py = project.python()
     only = clean_exclude(project)                                # e.g. "Q13": papers found only by a noise search are dropped
-    extra = ["--exclude-only-queries", only] if only else []
+    fallback = clean_country_fallback(project)
+    extra = (["--exclude-only-queries", only] if only else []) + ([] if fallback else ["--no-country-fallback"])
     cmd = runner.step_command(py, CLEAN_SCRIPT, ["--input", src, "--output", project.clean_file] + extra)
     if cmd is None:
         return False, "The Python environment is not set up yet (Settings)."
@@ -73,20 +140,27 @@ def clean_data(project, log):
     ok = stream(cmd, both, echo=False) == 0
     if ok:
         project.update(clean_data={"file": project.rel(project.clean_file), "source": (project.load().get("main_data") or {}).get("file"),
-                                   "made": started.strftime("%Y-%m-%dT%H:%M:%S"), "exclude": only})
+                                   "made": started.strftime("%Y-%m-%dT%H:%M:%S"), "exclude": only, "country_fallback": fallback})
         shutil.copy2(STEPS / CLEAN_SCRIPT, project.clean / CLEAN_SCRIPT)      # the exact script that made this result
         copy_common(project)
     info = project.load().get("main_data") or {}
+    versions = _versions(py)
+    reason = "" if ok else explain_failure(lines)
+    write_run_info(project.clean, "clean", {"when": started.isoformat(timespec="seconds"), "seconds": round(time.time() - t0, 1), "ok": ok,
+                                            "script": CLEAN_SCRIPT, "script_sha256": _sha(STEPS / CLEAN_SCRIPT),
+                                            "arguments": ["--input", project.rel(src), "--output", project.rel(project.clean_file)] + extra,
+                                            "inputs": _inputs(project, [src]), "outputs": _inputs(project, [project.clean_file]) if ok else [],
+                                            "settings": {"exclude_only_queries": only, "country_fallback": fallback}, "software": versions, "error": reason or None})
     head = ["The Data Application: step 1, clean the data",
             f"Project : {project.name}",
             f"Run     : {started.strftime('%Y-%m-%d %H:%M:%S')} (took {time.time() - t0:.0f} s)",
             f"Result  : {'finished' if ok else 'STOPPED WITH AN ERROR, nothing was written'}",
             f"Input   : {project.rel(src)}  ({info.get('records', '?')} records, SHA-256 {info.get('sha256', '?')[:16]}...)",
             f"Output  : {project.rel(project.clean_file)}" + (f"  (SHA-256 {_sha(project.clean_file)[:16]}...)" if ok and project.clean_file.exists() else ""),
-            f"Software: {_versions(py)}",
+            f"Software: {versions} (The Data Application {__version__})",
             "-" * 78]
     project.clean_log.write_text("\n".join(head + lines) + "\n", encoding="utf-8")
-    return ok, ("The data is cleaned. Results and the log are in 01_Clean_Data." if ok else "The cleaning stopped with an error (see the log).")
+    return ok, ("The data is cleaned. Results and the log are in 01_Clean_Data." if ok else f"The cleaning stopped: {reason} The full details are in the log.")
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------- sheets and plots
@@ -106,8 +180,9 @@ def sheet_state(project, name):
     return {"done": True, "made": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%dT%H:%M:%S"), "stale": stale}
 
 
-def _run_script(project, name, script, args, title, log, log_name):
-    """copy steps/sheets/<name>/<script> into <project>/<name>/ and run it there with the project's python; the run is logged to <project>/<name>/<log_name>"""
+def _run_script(project, name, script, args, title, log, log_name, section, prefix=()):
+    """copy steps/sheets/<name>/<script> into <project>/<name>/ and run it there with the project's python; the run is logged to <project>/<name>/<log_name>
+    and described in <project>/<name>/run_info.json under `section`. `prefix` goes between python and the script (the plot-look wrapper)."""
     py = project.python()
     folder = project.dir / name
     src = STEPS / "sheets" / name / script
@@ -130,12 +205,23 @@ def _run_script(project, name, script, args, title, log, log_name):
         log(text)
     started = datetime.now()
     t0 = time.time()
-    both("$ " + " ".join([project.rel(py), f"{name}/{script}"] + [project.rel(a) if str(a).startswith("/") or ":" in str(a)[:3] else str(a) for a in args]))
-    ok = stream([py, script] + [str(a) for a in args], both, echo=False, cwd=folder) == 0
-    head = [f"The Data Application: {title}", f"Project : {project.name}", f"Run     : {started.strftime('%Y-%m-%d %H:%M:%S')} (took {time.time() - t0:.0f} s)",
-            f"Result  : {'finished' if ok else 'STOPPED WITH AN ERROR'}", f"Script  : {name}/{script}", f"Software: {_versions(py)}", "-" * 78]
+    shown = [project.rel(a) if str(a).startswith("/") or ":" in str(a)[:3] else str(a) for a in list(prefix) + [script] + list(args)]
+    both("$ " + " ".join([project.rel(py)] + [f"{name}/{script}" if a == script else a for a in shown]))
+    ok = stream([py] + [str(a) for a in prefix] + [script] + [str(a) for a in args], both, echo=False, cwd=folder) == 0
+    versions = _versions(py)
+    reason = "" if ok else explain_failure(lines)
+    head = [f"The Data Application {__version__}: {title}", f"Project : {project.name}", f"Run     : {started.strftime('%Y-%m-%d %H:%M:%S')} (took {time.time() - t0:.0f} s)",
+            f"Result  : {'finished' if ok else 'STOPPED WITH AN ERROR: ' + reason}", f"Script  : {name}/{script}", f"Software: {versions}", "-" * 78]
     (folder / log_name).write_text("\n".join(head + lines) + "\n", encoding="utf-8")
-    return ok, "Done." if ok else "The script stopped with an error (see the log)."
+    md = project.load().get("main_data") or {}
+    inputs = [{"file": md.get("file"), "sha256": md.get("sha256"), "what": "main data (the Scopus export)"}] + _inputs(project, [project.clean_file])
+    if section != "data":
+        inputs += _inputs(project, sorted(folder.glob(f"{name}*.csv")))
+    write_run_info(folder, section, {"when": started.isoformat(timespec="seconds"), "seconds": round(time.time() - t0, 1), "ok": ok, "script": script,
+                                     "script_sha256": _sha(src), "command": " ".join(shown), "inputs": inputs,
+                                     "options": sheetlist.option_values(project, name), "year_window": years.get(project),
+                                     "plot_look": look.get(project) if section != "data" else None, "software": versions, "error": reason or None})
+    return ok, "Done." if ok else f"The script stopped: {reason} The full details are in the log."
 
 
 def run_sheet(project, name, log, _chain=()):
@@ -158,7 +244,7 @@ def run_sheet(project, name, log, _chain=()):
             return False, "No main data chosen yet (Settings)."
         args = ["--raw", raw]
     log(f"=== {name}")
-    ok, msg = _run_script(project, name, f"{name}.py", args, f"sheet {name}", log, f"{name}_log.txt")
+    ok, msg = _run_script(project, name, f"{name}.py", args, f"sheet {name}", log, f"{name}_log.txt", "data")
     return (ok, f"{spec['title']}: data generated." if ok else msg)
 
 
@@ -172,7 +258,10 @@ def run_plot(project, name, plot_id, log):
         if not ok:
             return False, msg
     log(f"=== plot of {name}")
-    ok, msg = _run_script(project, name, f"{name}_plot.py", (["--only", plot_id] if spec.get("per_plot") else []) + sheetlist.option_args(project, name, plot=True), f"plot of sheet {name}", log, f"{name}_plot_log.txt")
+    wrap = look.args(project)
+    prefix = [project.dir / "common" / "plotlook.py"] + wrap if wrap else []
+    ok, msg = _run_script(project, name, f"{name}_plot.py", (["--only", plot_id] if spec.get("per_plot") else []) + sheetlist.option_args(project, name, plot=True),
+                          f"plot of sheet {name}", log, f"{name}_plot_log.txt", f"plots/{plot_id if spec.get('per_plot') else 'all'}", prefix)
     return (ok, f"{spec['title']}: plot generated." if ok else msg)
 
 

@@ -33,10 +33,11 @@ def save(fig, name):
 
 t = read().sort_values("Documents")
 fig, ax = plt.subplots(figsize=(10, 0.5 * len(t) + 1.8))
-ax.barh([short(s, 60) for s in t["Institution"]], t["Documents"], color=BLUE)
+NAME = t.columns[0]                                         # "Institution", or "Parent Organisation" when the sheet counted by parent (--by parent)
+ax.barh([short(s, 60) for s in t[NAME]], t["Documents"], color=BLUE)
 for i, v in enumerate(t["Documents"]):
     ax.text(v + t["Documents"].max() * 0.01, i, str(v), va="center")
 ax.set_xlabel("Documents")
 ax.set_xlim(0, t["Documents"].max() * 1.12)
-ax.set_title("Most relevant affiliations")
+ax.set_title("Most relevant affiliations" if NAME == "Institution" else "Most relevant affiliations (parent organisations)")
 save(fig, "top_affiliations")

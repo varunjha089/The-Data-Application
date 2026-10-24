@@ -8,6 +8,19 @@ needed to use it. It runs on **macOS, Windows and Linux**.
 Today it can: **create and open projects, set up a Python environment per project, copy your main data into a project, clean the data, and generate every table and plot of the analysis**
 (24 sheets, 18 plots): each task has its own page with its **data table** and a **Generate plot** button.
 
+## Getting started (5 minutes)
+
+1. **Get the application**: `git clone https://github.com/varunjha089/The-Data-Application.git` (or download the ZIP from that page and unzip it).
+2. **Install Python 3.9 to 3.13** if you do not have it (see *What you need* below). Nothing else: the application installs its own packages.
+3. **Start it**: macOS double-click `The Data Application.app`; Windows double-click `run.pyw`; Linux `python3 the_data_app.py`.
+4. **No Scopus export yet?** On the opening screen press **Create the sample project**: a made-up export (invented papers, authors and journals) to try every step.
+   With your own data: **Create a new project**, then on **Settings** choose your Scopus CSV.
+5. On **Settings** press **Set up the environment** (the first time downloads pandas, numpy and matplotlib, about a minute).
+6. **Step 1: Clean the data**, then **Overview**: **Generate all data** and **Generate all plots**. Every task also has its own page with its table, plots and choices.
+7. Each result is in the project folder, one folder per task, with a log and a **run record** (`run_info.json`: version, script, arguments, checksums, settings).
+
+Something wrong? The message on the page says what failed and what to do; the full details are in the task's log (Download the log).
+
 ## What you need
 
 - **Python 3.9 or newer** from https://www.python.org/downloads/ (on Windows tick "Add Python to PATH" in the installer; on Debian/Ubuntu also install
@@ -157,14 +170,17 @@ python3 the_data_app.py add /path/to/project            # add an existing projec
 python3 the_data_app.py env  -p "My project" --create # or: --venv /path/to/venv
 python3 the_data_app.py data -p "My project" export.csv
 python3 the_data_app.py clean -p "My project"
-# the sheets and plots are generated in the window (Overview or the page of a sheet)
+python3 the_data_app.py run -p "My project"            # every sheet's data; add --plots for every plot
+python3 the_data_app.py years -p "My project" last10   # years in the plots: last10, last5, all, custom --from 2005 --to 2020; --roll-forward
+python3 the_data_app.py sample --location ~/Documents  # a project with made-up data, to try the application
 python3 the_data_app.py status -p "My project"
+python3 the_data_app.py --version
 python3 the_data_app.py gui --no-window               # start the server only and print its address
 ```
 
 ## Sharing it with friends
 
-Send the application folder as it is: it contains no projects, data, settings or environments of yours (those are in the folders you chose and in your user settings folder).
+The application is on GitHub: https://github.com/varunjha089/The-Data-Application (MIT licence). Send that link, or send the application folder as it is: it contains no projects, data, settings or environments of yours (those are in the folders you chose and in your user settings folder).
 Your friend opens the application, creates a project in a folder of their choice, and the window sets everything up on their computer. (`PLAN.md` and `CLAUDE.md` are notes for
 the developers.) On a Mac, a downloaded copy of the `.app` is blocked once by Gatekeeper: right-click it, choose Open, confirm. To share a **project** (not the application),
 copy its folder without `.venv` (a venv does not work on another system) and open it on the other computer with "A project that is not in the list".
@@ -210,3 +226,28 @@ This folder is a git repository (`git log` shows the history of the application'
 - `01_clean_data.py` keeps `Query_IDs` and `N_Queries` when the data has them. The Clean page has a box **Searches to drop** (also `python3 the_data_app.py clean -p NAME --exclude-only-queries Q13`): papers returned only by those searches (for example a search known to be noise) are dropped. It is saved in the project, and changing it marks the cleaned file out of date.
 - Sheet `Topic_Slices`: slices by search, term trends, optional gap audit and reference audit. Needs `Query_IDs` and a References export. What it cuts and looks for is **not in the code**: it is read from `topic_slices.json` in the project folder (next to `01_Clean_Data`). The first run writes one with automatic choices (the biggest searches as slices, the most frequent keywords as the term trend, no audit) for you to edit; the format is at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`. A worked definition (the Watershed study: flood / water mapping with conformal prediction) is in `steps/sheets/Topic_Slices/examples/`.
 - The burst plots write a "no burst found" picture instead of failing; the Bradford title shows the years of the data.
+
+## Version 0.3.0 (2026-10-24)
+
+- **Years in the plots** (Settings): *the last 10 complete years* (the default), *the last 5*, *all years*, or *years I choose*. A complete year is one that has ended:
+  in October 2026 the last 10 complete years are 2016-2025 (2026 is still being indexed, early-access papers carry 2027). The years are worked out when you choose
+  and then **saved**, so a plot does not change by itself next year; **Roll forward** works them out again. Every sheet with a year axis has the choice
+  *the project's years / all years / the years below*. Production, the life cycle and the burst strips draw all years by default (their meaning needs the whole history);
+  the others follow the project. The tables always keep every year.
+- **Look of the plots** (Settings): text size, picture size, resolution (150 / 300 / 600 dpi), an extra **PDF** and/or **TIFF** next to every PNG, and a **colour-blind safe**
+  palette (Okabe-Ito). The plot scripts are not changed: the application runs them through `steps/common/plotlook.py`, which changes only the picture; the command is in the log.
+- **Run record**: every task folder has `run_info.json` (application version, script and its SHA-256, the exact arguments, the SHA-256 of the export and the cleaned data,
+  the choices, the years, the look, Python and pandas versions), so every figure can be traced and made again. The Clean step has one too.
+- **Clearer messages**: a wrong file (an Excel workbook, a Web of Science or RIS file, a CSV with semicolons, a file that is not UTF-8, missing columns) is refused with
+  what to do; a task that stops says why in plain words (a missing column, a missing package, a file open in Excel, ...).
+- **Sample project**: made-up Scopus-format data (`app/sample.py`) to try everything without an export; also used by the tests.
+- **Tests**: `python -m unittest discover -s tests -v` (the full run makes the sample project and every sheet and plot; `TDA_QUICK=1` for the fast part).
+- **Missing countries**: an address written without its country (`Wuhan University, Wuhan`) gets the country of the same institution elsewhere in the data, when at least
+  2 and 2/3 of that institution's addresses name the same country. The cleaning report counts them; the table is `01_Clean_Data/institution_countries.csv`; the Affiliations
+  table says where each country came from (Country Source). It can be switched off on the Clean page.
+- **Parent organisations**: Affiliations has a Parent Organisation column (the institutes of the Chinese Academy of Sciences, CNRS, CSIC, CNR, Max Planck, Helmholtz, CSIR,
+  ICAR, ISRO, CSIRO, NASA, USGS, ... together; the list is `PARENTS` in `steps/common/names.py`). *Top affiliations* can count by institution or by parent organisation.
+- **Life cycle**: the S-curve is fitted on complete years only (by default up to last year; a choice on the page). The current year and early-access years are drawn hollow
+  and kept in the table (column In Fit).
+- **Bradford core**: each actor also gets the normalised citation score (citations divided by the mean of the papers of the same year: 1 = average) inside and outside the
+  core, and the mean h-index of the sources it publishes in; a fourth picture per kind (`core_<kind>_ncs`) compares core and other papers corrected for age.

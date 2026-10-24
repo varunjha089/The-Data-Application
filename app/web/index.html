@@ -38,6 +38,13 @@
   </section>
 
   <section class="card">
+    <div class="head"><h2>Try it first</h2></div>
+    <p>No Scopus export yet? The <b>sample project</b> has a made-up export (invented papers, authors and journals) so you can try every step. It is created in the folder above.</p>
+    <div class="row"><button id="sample">Create the sample project</button></div>
+    <div id="sample-msg" class="msg"></div>
+  </section>
+
+  <section class="card">
     <div class="head"><h2>Open an existing project</h2></div>
     <div id="project-list"></div>
     <div id="open-msg" class="msg"></div>
@@ -64,6 +71,7 @@
         <div class="head"><h2>Overview of the project</h2></div>
         <p>All tasks of the project. Open a task from the menu on the left, or generate everything here. A task needs the cleaned data (step 1); the tasks it needs are generated first.</p>
         <div id="ov-notice" class="notice hidden"></div>
+        <div id="ov-years" class="info"></div>
         <div class="row">
           <button id="ov-all" class="primary">Generate all data</button>
           <button id="ov-plots">Generate all plots</button>
@@ -106,6 +114,36 @@
       </section>
 
       <section class="card">
+        <div class="head"><h2>Years in the plots</h2><span id="years-pill" class="pill"></span></div>
+        <p>The years that the plots over time draw, for the whole project. The tables always keep every year. A sheet can still choose all years or its own range (on its page, under <i>Your choices</i>).</p>
+        <div class="row">
+          <label for="years-preset"><b>Draw</b></label>
+          <select id="years-preset" aria-label="Which years the plots draw"></select>
+          <label>from <input type="number" id="years-from" min="1900" max="2100" style="width:6em" aria-label="First year"></label>
+          <label>to <input type="number" id="years-to" min="1900" max="2100" style="width:6em" aria-label="Last year"></label>
+          <button id="years-roll" class="hidden">Roll forward</button>
+        </div>
+        <div id="years-info" class="info"></div>
+        <div id="years-msg" class="msg"></div>
+      </section>
+
+      <section class="card">
+        <div class="head"><h2>Look of the plots</h2><span id="look-pill" class="pill"></span></div>
+        <p>For every plot of this project. Generate a plot again to see the change. Only the picture changes, never the data.</p>
+        <div class="row">
+          <label>Text size <select id="look-text" aria-label="Text size of the plots"></select></label>
+          <label>Picture size <select id="look-size" aria-label="Size of the plots"></select></label>
+          <label>Resolution <select id="look-dpi" aria-label="Resolution of the plots"></select></label>
+        </div>
+        <div class="row">
+          <label>Colours <select id="look-palette" aria-label="Colours of the plots"></select></label>
+          <label><input type="checkbox" id="look-pdf"> also save a PDF</label>
+          <label><input type="checkbox" id="look-tiff"> also save a TIFF (for journals)</label>
+        </div>
+        <div id="look-msg" class="msg"></div>
+      </section>
+
+      <section class="card">
         <div class="head"><h2>Main data</h2><span id="data-pill" class="pill">none</span></div>
         <p>Choose the Scopus export (CSV). A <b>copy</b> is kept in the project's <code>data/raw</code> folder; your original file is never changed.</p>
         <div id="data-info" class="info"></div>
@@ -128,6 +166,9 @@
         <div class="info"><b>Searches to drop</b> (only for data merged from several Scopus searches, which carries a <code>Query_IDs</code> column; otherwise leave empty)<br>
           <label>Drop papers found only by these search IDs, separated by commas (for example <code>Q13</code>): <input id="clean-exclude" type="text" style="width:14em" placeholder="none"></label>
           <span id="clean-exclude-msg" class="msg"></span></div>
+        <div class="info"><label><input type="checkbox" id="clean-fallback"> <b>Fill in a missing country</b> from the same institution elsewhere in the data
+          (when an address such as <code>Wuhan University, Wuhan</code> has no country but most addresses of that institution name one)</label>
+          <span id="clean-fallback-msg" class="msg"></span></div>
         <div id="clean-info" class="info"></div>
         <div class="row">
           <button id="clean" class="primary">Clean the data</button>
@@ -159,6 +200,7 @@
           <span id="sh-plot-buttons"></span>
           <a id="sh-dl" class="button hidden" href="#">Download the CSV</a>
           <a id="sh-dl-log" class="button hidden" href="#">Download the log</a>
+          <a id="sh-dl-info" class="button hidden" href="#" title="What made these files: application version, script, arguments, input checksums, settings">Run record</a>
           <span id="sh-downloads"></span>
           <button id="sh-folder" class="hidden">Show the folder</button>
         </div>

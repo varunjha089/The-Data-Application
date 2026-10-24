@@ -1,4 +1,4 @@
-"""common/names.py : shared name rules for countries and institutions (used by 01_clean_data.py and Affiliations.py).
+"""common/names.py : shared name rules for countries, institutions and parent organisations (used by 01_clean_data.py and Affiliations.py).
 
 Scopus writes an affiliation as "Department, Institution, City, Postcode, Country". The old rule "country = text after the last comma" gave
 non-countries whenever the address had no country or an old style one ("FRG", "Fr", "MA 02125", "Seoul National University"). The rules here keep a
@@ -117,3 +117,84 @@ def canonical_names(names):
         groups[institution_key(n)][n] += 1
     best = {k: sorted(c.items(), key=lambda kv: (-kv[1], -len(kv[0]), kv[0]))[0][0] for k, c in groups.items()}
     return {n: re.sub(r"^[Tt]he\s+", "", best[institution_key(n)]) for n in set(names)}
+
+
+# ---------------------------------------------------------------- a country from the same institution elsewhere in the data
+def learn_institution_countries(affiliations, least=2, share=2 / 3):
+    """{institution key: (country, institution name, votes)} learned from the affiliations of the data that DO name their country. An institution gets the
+    country written in at least `least` of its addresses and in at least `share` of them; an institution seen in two countries about equally gets none.
+    It gives a country to an address written without one ("Wuhan University, Wuhan" when other papers write "Wuhan University, Wuhan, China")."""
+    from collections import Counter, defaultdict
+    votes, names = defaultdict(Counter), {}
+    for a in affiliations:
+        c = country_of_affiliation(a)
+        inst = institution_of_affiliation(a) if c and isinstance(a, str) else None
+        if inst:
+            k = institution_key(inst)
+            votes[k][c] += 1
+            names.setdefault(k, inst)
+    out = {}
+    for k, cnt in votes.items():
+        c, n = cnt.most_common(1)[0]
+        if n >= least and n >= share * sum(cnt.values()):
+            out[k] = (c, names[k], n)
+    return out
+
+
+def country_with_fallback(affiliation, learned):
+    """(country, how): the country written in the address ("address"), else the one learned for its institution ("institution"), else (None, None)"""
+    c = country_of_affiliation(affiliation)
+    if c:
+        return c, "address"
+    inst = institution_of_affiliation(affiliation) if isinstance(affiliation, str) and learned else None
+    hit = learned.get(institution_key(inst)) if inst else None
+    return (hit[0], "institution") if hit else (None, None)
+
+
+# ---------------------------------------------------------------- parent organisations
+# Large research organisations made of many institutes. Scopus names the institute ("Aerospace Information Research Institute, Chinese Academy of Sciences,
+# Beijing, China"), so each institute is counted on its own; the parent lets them be counted together as well. A part of the address is matched, never the
+# whole address, and a university that only carries the name ("University of Chinese Academy of Sciences", "Leibniz University Hannover") is not a member.
+PARENTS = [(re.compile(rx, re.I), name) for rx, name in [
+    (r"^(the )?chinese academy of sciences?$|^cas$|\b(institute|institutes|center|centre|station|observatory) of .*chinese academy of sciences?$|, cas$|\bof cas\b", "Chinese Academy of Sciences"),
+    (r"chinese academy of agricultural sciences|\bcaas\b", "Chinese Academy of Agricultural Sciences"),
+    (r"chinese academy of forestry", "Chinese Academy of Forestry"),
+    (r"\bcnrs\b|centre national de la recherche scientifique", "CNRS (France)"),
+    (r"\binrae?\b|institut national de (la )?recherche (pour l'agriculture|agronomique)", "INRAE (France)"),
+    (r"institut de recherche pour le d[ée]veloppement|^ird$", "IRD (France)"),
+    (r"\bcsic\b|consejo superior de investigaciones cient[ií]ficas|spanish national research council", "CSIC (Spain)"),
+    (r"consiglio nazionale delle ricerche|national research council of italy|^cnr$|\bcnr[- ]", "CNR (Italy)"),
+    (r"max[- ]planck", "Max Planck Society"),
+    (r"helmholtz", "Helmholtz Association"),
+    (r"fraunhofer", "Fraunhofer Society"),
+    (r"leibniz[- ]?(institut|institute|centre|center|zentrum)", "Leibniz Association"),
+    (r"russian academy of sciences|^ras$", "Russian Academy of Sciences"),
+    (r"polish academy of sciences", "Polish Academy of Sciences"),
+    (r"czech academy of sciences|academy of sciences of the czech republic", "Czech Academy of Sciences"),
+    (r"academia sinica", "Academia Sinica"),
+    (r"council of scientific (and|&) industrial research|^csir[- ]|\bcsir-", "CSIR (India)"),
+    (r"council for scientific (and|&) industrial research", "CSIR (South Africa)"),
+    (r"indian council of agricultural research|\bicar\b", "ICAR (India)"),
+    (r"indian space research organi[sz]ation|\bisro\b", "ISRO (India)"),
+    (r"defen[cs]e research (and|&) development organi[sz]ation|\bdrdo\b", "DRDO (India)"),
+    (r"\bcsiro\b|commonwealth scientific and industrial research organi[sz]ation", "CSIRO (Australia)"),
+    (r"^nasa\b|\bnasa\b", "NASA"),
+    (r"\bnoaa\b|national oceanic and atmospheric administration", "NOAA"),
+    (r"\busgs\b|u\.? ?s\.? geological survey|united states geological survey", "U.S. Geological Survey"),
+    (r"\busda\b|agricultural research service|(united states|u\.? ?s\.?) department of agriculture", "U.S. Department of Agriculture"),
+    (r"\briken\b", "RIKEN (Japan)"),
+]]
+_MEMBER_OF_NAME_ONLY = re.compile(r"^(the )?(univ|university|universit)", re.I)
+
+
+def parent_of_affiliation(affiliation):
+    """the parent organisation named in ONE affiliation (see PARENTS), or None"""
+    if not isinstance(affiliation, str):
+        return None
+    for part in (p.strip() for p in affiliation.split(",")):
+        if not part or _MEMBER_OF_NAME_ONLY.match(part):
+            continue
+        for rx, name in PARENTS:
+            if rx.search(part):
+                return name
+    return None
