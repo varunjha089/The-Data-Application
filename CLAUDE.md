@@ -1,6 +1,6 @@
 # CLAUDE.md: The Data Application
 
-Standing instructions for working on this folder (`Power_Query/The_Data_Application/`). Read this first, then `PLAN.md` (decisions, what was checked and what was NOT), `README.md` (use) and `FUTURE_PLAN.md` (ideas for later, not built yet).
+Standing instructions for working on this folder (`The_Data_Application/`, kept in `Future_Research/Productivity Application/` since 2026-10-24; it was in `College/Power_Query/` before). Read this first, then `PLAN.md` (decisions, what was checked and what was NOT), `README.md` (use) and `FUTURE_PLAN.md` (ideas for later, not built yet).
 
 ## What it is
 
@@ -17,7 +17,7 @@ A standalone, shareable desktop application (a local web server shown in an app 
 - Keep `README.md` (use) and `PLAN.md` (decisions, checked / NOT checked) up to date for every feature.
 - Back up the code before a change: `zip -qr "Backup/$(date +%Y-%m-%d_%H-%M-%S)_<why>.zip" app steps the_data_app.py requirements.txt README.md PLAN.md CLAUDE.md` (`Backup/` is not shared).
 - The user wears spectacles: keep text in the application large and plain. The machine is macOS (BSD `sed`): edit with Python or the Edit tool, not `sed -i`.
-- **Version control: git, for this folder only** (`The_Data_Application/` is the repository; the rest of `Power_Query/` is not). After a finished change (a feature, a fix, a doc update that was asked for) that has been checked, commit it: `git add -A && git commit` with a short message that says what changed and why, ending with the attribution lines of the session. One topic per commit; never commit a half-working state. The remote is `origin` = https://github.com/varunjha089/The-Data-Application (public): push only when Varun asks, and never rewrite pushed history. The repository is public: never commit data, tokens, personal paths or names of study projects in code. The `Backup/` zips are no longer needed before a change: git is the history (keep making one only before something large and risky). Never commit user data, `.venv/`, `__pycache__/` or logs (see `.gitignore`); look at `git status` before committing.
+- **Version control: git, for this folder only** (`The_Data_Application/` is the repository; the folder around it is not). After a finished change (a feature, a fix, a doc update that was asked for) that has been checked, commit it: `git add -A && git commit` with a short message that says what changed and why, ending with the attribution lines of the session. One topic per commit; never commit a half-working state. The remote is `origin` = https://github.com/varunjha089/The-Data-Application (public): push only when Varun asks, and never rewrite pushed history. The repository is public: never commit data, tokens, personal paths or names of study projects in code. The `Backup/` zips are no longer needed before a change: git is the history (keep making one only before something large and risky). Never commit user data, `.venv/`, `__pycache__/` or logs (see `.gitignore`); look at `git status` before committing.
 - Python on this machine: `python3` is 3.15 without packages; the packages live in `/opt/homebrew/bin/python3.14`.
 
 ## Layout
@@ -49,7 +49,7 @@ tests/test_app.py      unittest: fast tests (stdlib) + a full run of the sample 
 requirements.txt       packages for the venvs
 ```
 
-A new sheet or plot = a script in `steps/sheets/<Sheet>/` + an entry in `app/sheets.py`: the menu, the page, the table, the buttons and the routes are generic (`app.js` renderSheet, `server.py` /api/sheets, /api/sheet/*). A new kind of step (like the cleaning) needs a function in `pipeline.py`, a job in `server.py` and a page in `index.html`/`app.js`. `Power_Query/Workbook_Sheets` holds the same scripts for use without the application: keep the two in step (the app copy is the master for the sheet/plot scripts only after they were generated and checked there).
+A new sheet or plot = a script in `steps/sheets/<Sheet>/` + an entry in `app/sheets.py`: the menu, the page, the table, the buttons and the routes are generic (`app.js` renderSheet, `server.py` /api/sheets, /api/sheet/*). A new kind of step (like the cleaning) needs a function in `pipeline.py`, a job in `server.py` and a page in `index.html`/`app.js`. `College/Power_Query/Workbook_Sheets` (outside this repository, not moved with it) holds the same scripts for use without the application: keep the two in step (the app copy is the master for the sheet/plot scripts only after they were generated and checked there).
 
 ## Test without touching anything
 
