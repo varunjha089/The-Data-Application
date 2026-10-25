@@ -1,5 +1,5 @@
 """Sheet "15_Lotka": Lotka's law: how many authors wrote 1, 2, 3 ... papers.
-Excel: N. of Authors = COUNTIF(Author_Summary[NP], n); Proportion of Authors = N / total; Lotka (beta = 2) = 0.6079 / n^2;
+Excel: N. of Authors = COUNTIF(Author_Summary[NP], n); Proportion of Authors = N / total; Lotka (beta = 2) = 0.6079 / n^2 (both written as % of authors);
 beta (slope) = minus the slope of LN(proportion) against LN(n); C = EXP(intercept); R2 of that straight line.
 Input : Author_Summary/Author_Summary.csv (run Author_Summary.py first)        Output: 15_Lotka.csv and 15_Lotka_parameters.csv
 Run   : python3 15_Lotka.py
@@ -20,6 +20,8 @@ def read_csv(path, **kw):
 
 
 def write(df, path=OUT):
+    df = df.round(2).apply(lambda c: c.map(lambda v: round(v, 2) if isinstance(v, float) else v) if c.dtype == object else c)
+                                                             # every decimal number with at most 2 decimal places, also in mixed text/number columns
     df.to_csv(path, index=False, encoding="utf-8-sig")
     print(f"written {path.name}: {len(df)} rows, {df.shape[1]} columns")
 
@@ -34,6 +36,9 @@ table["Lotka (β = 2)"] = 0.6079 / table["Documents written"] ** 2
 x, y = np.log(table["Documents written"].astype(float)), np.log(table["Proportion of Authors"])
 slope, intercept = np.polyfit(x, y, 1)
 r2 = float(np.corrcoef(x, y)[0, 1] ** 2)
+table["Proportion of Authors"] *= 100                      # written as percentages: a proportion with 2 decimals would round small shares to 0
+table["Lotka (β = 2)"] *= 100
+table = table.rename(columns={"Proportion of Authors": "Authors (%)", "Lotka (β = 2)": "Lotka β = 2 (%)"})
 params = pd.DataFrame([("β (slope)", -slope), ("C", float(np.exp(intercept))), ("R²", r2)], columns=["Parameter", "Value"])
 print(params.to_string(index=False))
 write(table)

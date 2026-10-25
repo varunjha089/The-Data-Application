@@ -23,6 +23,8 @@ def read_csv(path, **kw):
 
 
 def write(df, path=OUT):
+    df = df.round(2).apply(lambda c: c.map(lambda v: round(v, 2) if isinstance(v, float) else v) if c.dtype == object else c)
+                                                             # every decimal number with at most 2 decimal places, also in mixed text/number columns
     df.to_csv(path, index=False, encoding="utf-8-sig")
     print(f"written {path.name}: {len(df)} rows, {df.shape[1]} columns")
 
@@ -50,7 +52,7 @@ rows = []
 for source, g in clean.dropna(subset=["Source title"]).groupby("Source title", sort=False):
     cites = g["Cited by"].tolist()
     h, py = h_index(cites), int(g["Year"].min())
-    rows.append((source, len(g), int(sum(cites)), py, h, g_index(cites), round(h / max(2026 - py + 1, 1), 3)))
+    rows.append((source, len(g), int(sum(cites)), py, h, g_index(cites), round(h / max(2026 - py + 1, 1), 2)))
 table = pd.DataFrame(rows, columns=["Source title", "NP", "TC", "PY_start", "h_index", "g_index", "m_index"])
 table = table.sort_values("h_index", ascending=False, kind="stable").reset_index(drop=True)
 ap = argparse.ArgumentParser()

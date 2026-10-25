@@ -19,6 +19,8 @@ def read_csv(path, **kw):
 
 
 def write(df, path=OUT):
+    df = df.round(2).apply(lambda c: c.map(lambda v: round(v, 2) if isinstance(v, float) else v) if c.dtype == object else c)
+                                                             # every decimal number with at most 2 decimal places, also in mixed text/number columns
     df.to_csv(path, index=False, encoding="utf-8-sig")
     print(f"written {path.name}: {len(df)} rows, {df.shape[1]} columns")
 

@@ -34,7 +34,7 @@ cum_f = src_df["CumFreq"].values.astype(float)
 slope, intercept = np.polyfit(log_r, cum_f, 1)
 r2 = float(np.corrcoef(log_r, cum_f)[0, 1] ** 2)
 k_geom = np.sqrt(len(z2r) / len(z1r) * len(z3r) / len(z2r))
-print(f"zones {len(z1r)}/{len(z2r)}/{len(z3r)} sources, {N_attr} documents, C(r) = {intercept:.2f} + {slope:.2f} ln(r), R2 = {r2:.3f}, k = {k_geom:.2f}")
+print(f"zones {len(z1r)}/{len(z2r)}/{len(z3r)} sources, {N_attr} documents, C(r) = {intercept:.2f} + {slope:.2f} ln(r), R2 = {r2:.2f}, k = {k_geom:.2f}")
 
 # Abbreviation map (applied after title-casing + minor-word lowering + country strip)
 ABBREV = {
@@ -89,7 +89,7 @@ ax.plot(np.log(src_df['Rank'].values), src_df['CumFreq'].values,
 
 # Fit line
 ax.plot(x_fit, y_fit, color='#c0392b', linewidth=1.0, linestyle='--', zorder=2,
-        label=f'$C(r)={intercept:.2f}+{slope:.2f}\\,\\ln(r)$   $R^2={r2:.3f}$')
+        label=f'$C(r)={intercept:.2f}+{slope:.2f}\\,\\ln(r)$   $R^2={r2:.2f}$')
 
 # Zone boundaries
 for x_bnd in [z1_x, z2_x]:
@@ -138,7 +138,7 @@ except (OSError, ValueError, KeyError):
     span = ""
 ax.set_title(
     f"Bradford's Law{span}\n"
-    f"$k={k_geom:.2f}$   |   $R^2={r2:.3f}$   |   {n_sources} named sources,  $N_{{\\mathrm{{attr}}}}={N_attr}$",
+    f"$k={k_geom:.2f}$   |   $R^2={r2:.2f}$   |   {n_sources} named sources,  $N_{{\\mathrm{{attr}}}}={N_attr}$",
     fontsize=11, fontweight='bold')
 
 ax.yaxis.grid(True, linewidth=0.4, alpha=0.45)

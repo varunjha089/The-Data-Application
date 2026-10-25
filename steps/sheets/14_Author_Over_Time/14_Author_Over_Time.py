@@ -25,6 +25,8 @@ def read_csv(path, **kw):
 
 
 def write(df, path=OUT):
+    df = df.round(2).apply(lambda c: c.map(lambda v: round(v, 2) if isinstance(v, float) else v) if c.dtype == object else c)
+                                                             # every decimal number with at most 2 decimal places, also in mixed text/number columns
     df.to_csv(path, index=False, encoding="utf-8-sig")
     print(f"written {path.name}: {len(df)} rows, {df.shape[1]} columns")
 
@@ -75,7 +77,7 @@ ref_year = int(au["Year"].max()) + 1
 t = au[au["Author ID"].isin(top)].drop_duplicates(["Author ID", "EID"])
 t = t.assign(TC=pd.to_numeric(t["Cited by"], errors="coerce").fillna(0))
 tl = t.groupby(["Author ID", "Year"]).agg(Papers=("EID", "count"), TC=("TC", "sum")).reset_index()
-tl["TC per year"] = (tl["TC"] / (ref_year - tl["Year"].astype(int) + 1)).round(3)
+tl["TC per year"] = (tl["TC"] / (ref_year - tl["Year"].astype(int) + 1)).round(2)
 tl["Author"] = tl["Author ID"].map(names)
 tl["order"] = tl["Author ID"].map({a: i for i, a in enumerate(top)})
 tl = tl.sort_values(["order", "Year"]).drop(columns="order")[["Author", "Author ID", "Year", "Papers", "TC", "TC per year"]]

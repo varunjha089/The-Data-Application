@@ -22,6 +22,8 @@ def read_csv(path, **kw):
 
 
 def write(df, path=OUT):
+    df = df.round(2).apply(lambda c: c.map(lambda v: round(v, 2) if isinstance(v, float) else v) if c.dtype == object else c)
+                                                             # every decimal number with at most 2 decimal places, also in mixed text/number columns
     df.to_csv(path, index=False, encoding="utf-8-sig")
     print(f"written {path.name}: {len(df)} rows, {df.shape[1]} columns")
 
@@ -55,7 +57,7 @@ for ident, g in au.groupby("Author ID", sort=False, dropna=False):
     top = max(count.values())
     author = [n for n in names if count[n] == top][-1]
     h, py = h_index(cites), int(g["Year"].min())
-    rows.append((ident, len(g), g["Frac"].sum(), int(sum(cites)), py, author, h, g_index(cites), round(h / max(2026 - py + 1, 1), 3)))
+    rows.append((ident, len(g), g["Frac"].sum(), int(sum(cites)), py, author, h, g_index(cites), round(h / max(2026 - py + 1, 1), 2)))
 summary = pd.DataFrame(rows, columns=["Author ID", "NP", "NP_Frac", "TC", "PY_start", "Author", "h_index", "g_index", "m_index"])
 summary = summary.sort_values(["NP", "NP_Frac"], ascending=False, kind="stable").reset_index(drop=True)
 print(f"{len(summary)} authors; most papers: {summary.iloc[0]['Author']} ({summary.iloc[0]['NP']})")

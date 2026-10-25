@@ -34,13 +34,14 @@ def save(fig, name):
 t = read()
 p = read("15_Lotka_parameters.csv").set_index("Parameter")["Value"]
 fig, ax = plt.subplots(figsize=(9, 5.5))
-ax.plot(t["Documents written"], t["Proportion of Authors"], color=BLUE, marker="o", lw=2.5, label="Observed")
-ax.plot(t["Documents written"], t["Lotka (β = 2)"], color=ORANGE, marker="o", lw=2, ls="--", label="Lotka with β = 2")
+n = t["Documents written"].astype(float)                     # the shares from the counts, exactly: the table rounds them to 2 decimals
+ax.plot(n, t["N. of Authors"] / t["N. of Authors"].sum() * 100, color=BLUE, marker="o", lw=2.5, label="Observed")
+ax.plot(n, 60.79 / n ** 2, color=ORANGE, marker="o", lw=2, ls="--", label="Lotka with β = 2")
 ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel("Documents written (log scale)")
-ax.set_ylabel("Proportion of authors (log scale)")
+ax.set_ylabel("Authors (%, log scale)")
 ax.legend(frameon=False)
-ax.text(0.04, 0.30, f"fitted β = {p['β (slope)']:.2f}\nC = {p['C']:.3f}\nR2 = {p['R²']:.3f}", transform=ax.transAxes, ha="left", va="top")
+ax.text(0.04, 0.30, f"fitted β = {p['β (slope)']:.2f}\nC = {p['C']:.2f}\nR2 = {p['R²']:.2f}", transform=ax.transAxes, ha="left", va="top")
 ax.set_title("Lotka's law")
 save(fig, "lotka")

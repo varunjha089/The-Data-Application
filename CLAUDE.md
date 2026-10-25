@@ -84,6 +84,9 @@ future/                   finished code taken out of the menu (kept for later)
   Elsevier's and changes a few times a year); the sample project writes a made-up one.
 - **A sheet that does not apply to a data set** (no References column, no Query_IDs, no Source List): its script prints `SKIPPED: <why>` and ends with
   exit code 0 without writing its first CSV; never `raise SystemExit("...")`, which is an error and stops Generate all at that sheet.
+- **Numbers in a table**: every sheet script's `write()` rounds to 2 decimal places (also numbers inside a mixed text/number column); a test checks
+  that no CSV of the sample project has more. A share that would round to 0.00 is written as a percentage (`... (%)`), and a plot that needs the exact
+  value computes it from the counts instead of reading the rounded column (as `15_Lotka_plot.py` does). A new sheet copies this `write()`.
 - **A year axis**: use the helper block of the year plots (`year_args`, `year_window`, `year_label`, `year_axis`, `year_rows`) and add the sheet to the `_year_options`
   loop in `app/sheets.py` (choose whether it follows the project's years or draws all years by default).
 - **A new kind of step** (like the cleaning): a function in `pipeline.py`, a job in `server.py`, a page in `index.html` / `app.js`.

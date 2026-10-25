@@ -232,6 +232,14 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.6.2 (2026-10-25)
+
+- **Every number in the tables has at most 2 decimal places** (Mean Citations per Document and per Year, TC per year, m index, MCP ratio, the
+  Life cycle and Lotka parameters, ...), in the CSV files, the tables in the window and the table pictures. Generate the data again to see it.
+- Shares that were proportions between 0 and 1 are now percentages, so that 2 decimals keep small values: Bradford's law has **Cumulative Share (%)**
+  (Zone 1 up to 33.33 %), Lotka's law has **Authors (%)** and **Lotka β = 2 (%)**. The Lotka plot computes its points from the counts, so it is exact.
+- The numbers written on the Life cycle, Lotka and Bradford plots (r, C, R²) also have 2 decimals.
+
 ## Version 0.6.1 (2026-10-25)
 
 - **Generate all no longer stops at Topic slices** on a data set of one search. Topic slices needs the columns Query_IDs and N_Queries (merged Scopus

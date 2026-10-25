@@ -24,6 +24,8 @@ def read_csv(path, **kw):
 
 
 def write(df, path=OUT):
+    df = df.round(2).apply(lambda c: c.map(lambda v: round(v, 2) if isinstance(v, float) else v) if c.dtype == object else c)
+                                                             # every decimal number with at most 2 decimal places, also in mixed text/number columns
     df.to_csv(path, index=False, encoding="utf-8-sig")
     print(f"written {path.name}: {len(df)} rows, {df.shape[1]} columns")
 
@@ -73,7 +75,7 @@ print(f"timeline: {len(chosen)} sources (asked for {N}, ties {'kept' if opt.keep
 ref_year = int(clean["Year"].max()) + 1
 t = d[d["Source title"].isin(chosen)].assign(TC=lambda x: pd.to_numeric(x["Cited by"], errors="coerce").fillna(0))
 tl = t.groupby(["Source title", "Year"]).agg(Papers=("EID", "count"), TC=("TC", "sum")).reset_index()
-tl["TC per year"] = (tl["TC"] / (ref_year - tl["Year"].astype(int) + 1)).round(3)
+tl["TC per year"] = (tl["TC"] / (ref_year - tl["Year"].astype(int) + 1)).round(2)
 tl["order"] = tl["Source title"].map({a: i for i, a in enumerate(chosen)})
 tl = tl.sort_values(["order", "Year"]).drop(columns="order")[["Source title", "Year", "Papers", "TC", "TC per year"]]
 write(tl, HERE / "11_Source_Timeline.csv")

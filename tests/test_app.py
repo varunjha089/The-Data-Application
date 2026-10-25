@@ -10,6 +10,7 @@ import csv
 import http.client
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -364,6 +365,12 @@ class FullRun(unittest.TestCase):
             if not (folder / "run_info.json").exists():
                 missing.append(f"{spec['name']}/run_info.json")
         self.assertEqual(missing, [])
+        long_decimals = []                                          # every number in a sheet's tables has at most 2 decimal places
+        for spec in sheets.SHEETS:
+            for path in (pr.dir / spec["name"]).glob("*.csv"):
+                with open(path, encoding="utf-8-sig") as f:
+                    long_decimals += [f"{path.name}: {v}" for row in csv.reader(f) for v in row if re.fullmatch(r"-?\d+\.\d{3,}", v)][:1]
+        self.assertEqual(long_decimals, [])
         sys.path.insert(0, str(pr.dir / "common"))                 # a year-limited table picture: rows kept, Grand Total recounted
         import table_image
         tmp_csv = TMP / "years.csv"
