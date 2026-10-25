@@ -222,6 +222,14 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`).
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.5.2 (2026-10-25)
+
+- **Table pictures follow the years of the plots.** On a sheet with a year setting (the project's years, all years, or its own), the table picture shows
+  the same years as the plot: the rows of a table with a Year column, or the year columns of a table whose columns are years (Countries, Authors,
+  Affiliations over time). The title names the years ("Annual production (10 rows, 2016–2025)"); a Grand Total column is recounted over the years shown
+  and called "Total 2016–2025". The CSV keeps every year. Generating the plot redraws these pictures, so a new year setting reaches them too.
+- Table pictures are wide enough for their full title.
+
 ## Version 0.5.1 (2026-10-25)
 
 - **The table picture is shown on the sheet page**, under *Plots and tables*, next to the plots, with its PNG / SVG links.

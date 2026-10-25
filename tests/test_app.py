@@ -347,6 +347,15 @@ class FullRun(unittest.TestCase):
             if not (folder / "run_info.json").exists():
                 missing.append(f"{spec['name']}/run_info.json")
         self.assertEqual(missing, [])
+        sys.path.insert(0, str(pr.dir / "common"))                 # a year-limited table picture: rows kept, Grand Total recounted
+        import table_image
+        tmp_csv = TMP / "years.csv"
+        tmp_csv.write_text("Country,2014,2015,2016,Grand Total\nA,1,2,3,6\nB,4,0,5,9\n", encoding="utf-8")
+        table_image.draw(tmp_csv, 50, "t", 2015, 2016)
+        self.assertTrue((TMP / "years_table.svg").exists())
+        svg = (TMP / "years_table.svg").read_text(encoding="utf-8")
+        self.assertIn("Total 2015–2016", svg)
+        self.assertNotIn(">2014<", svg)
         for sheet, csv_name in (("03_Annual_Production", "03_Annual_Production"), ("09_Pivot", "09_Pivot"), ("Bradford_Core", "Bradford_Core_baseline")):
             for ext in ("png", "svg"):                          # every table also as a picture (first look.table_rows rows)
                 self.assertTrue((pr.dir / sheet / f"{csv_name}_table.{ext}").exists(), f"{sheet}/{csv_name}_table.{ext}")

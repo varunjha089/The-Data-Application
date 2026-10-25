@@ -238,12 +238,14 @@ def make_table_pictures(project, name, log):
         return
     spec = sheetlist.get(name)
     rows = str(look.get(project)["table_rows"])
+    yrs = sheetlist.plot_years(project, name)          # the years the sheet's plots draw: the table pictures follow them
+    year_args = ["--from-year", str(yrs[0]), "--to-year", str(yrs[1])] if yrs else []
     for c in spec["csvs"]:
         path = sheet_csv(project, name, c)
         if not path.exists() or not c.endswith(".csv"):
             continue
         title = spec["title"] if c == spec["csvs"][0] else spec["title"] + ": " + c[:-4].split("_", 1)[-1].replace("_", " ")
-        stream([py, project.dir / "common" / "table_image.py", path.name, "--rows", rows, "--title", title], log, echo=False, cwd=path.parent)
+        stream([py, project.dir / "common" / "table_image.py", path.name, "--rows", rows, "--title", title] + year_args, log, echo=False, cwd=path.parent)
 
 
 def run_sheet(project, name, log, _chain=()):
@@ -289,7 +291,7 @@ def run_plot(project, name, plot_id, log):
     if ok:
         stale = [c for c in spec["csvs"] if c.endswith(".csv") and sheet_csv(project, name, c).exists()
                  and not _fresh_picture(sheet_csv(project, name, c))]
-        if stale:                                      # the data was made before table pictures existed (or by hand): draw them now
+        if stale or sheetlist.plot_years(project, name) is not None:   # missing / older than the data, or the years may have changed: draw them now
             make_table_pictures(project, name, log)
     return (ok, f"{spec['title']}: plot generated." if ok else msg)
 

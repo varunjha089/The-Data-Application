@@ -1,10 +1,11 @@
 """common/table_image.py : a picture of a table (PNG and SVG), for papers and slides; the CSV stays the full, exact data.
 
-    python3 table_image.py <table.csv> [--rows 50] [--title "Annual production"]
+    python3 table_image.py <table.csv> [--rows 50] [--title "Annual production"] [--from-year 2016 --to-year 2025]
 
 Writes <table>_table.png and <table>_table.svg next to the CSV. The cells are shown exactly as the CSV has them (no rounding, no reformatting);
 very long cells are shortened with "..." (the CSV keeps them whole). Only the first --rows rows are drawn (0 = all, at most 1000); the title then
-says "first N of M rows". Numbers are right-aligned, text left-aligned, the header is bold and every other row is shaded. The SVG keeps the text
+says "first N of M rows". --from-year / --to-year (0 = open) keep the years the plots draw: the rows whose Year column is in the range, or, in a
+table whose columns are years (1994, 1995, ...), those columns only; the title names the years. Numbers are right-aligned, text left-aligned, the header is bold and every other row is shaded. The SVG keeps the text
 as text, so it can be edited. Needs pandas and matplotlib (the project's environment has them).
 """
 import argparse
@@ -35,9 +36,32 @@ def short(s, n=MAX_CHARS):
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
-def draw(csv_path, rows=50, title=None):
+def in_range(y, lo, hi):
+    try:
+        y = int(float(y))
+    except ValueError:
+        return True                                   # not a year (a total row, an empty cell): kept
+    return (not lo or y >= lo) and (not hi or y <= hi)
+
+
+def draw(csv_path, rows=50, title=None, lo=0, hi=0):
     csv_path = Path(csv_path)
     df = pd.read_csv(csv_path, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+    years = ""
+    if lo or hi:
+        year_cols = [c for c in df.columns if c.strip().isdigit() and len(c.strip()) == 4]
+        if "Year" in df.columns:
+            df = df[df["Year"].map(lambda y: in_range(y, lo, hi))]
+        elif len(year_cols) >= 3:
+            kept = [c for c in year_cols if in_range(c, lo, hi)]
+            df = df[[c for c in df.columns if c not in year_cols or c in kept]].copy()
+            for tot in [c for c in df.columns if c.strip().lower() in ("grand total", "total")]:
+                # the total of the file counts every year: recount it over the years shown, and say so
+                nums = df[kept].apply(lambda col: pd.to_numeric(col.str.replace(",", ""), errors="coerce")).fillna(0)
+                df[tot] = nums.sum(axis=1).map(lambda v: f"{v:g}")
+                df = df.rename(columns={tot: f"Total {lo or 'start'}–{hi or 'last year'}"})
+        if "Year" in df.columns or len(year_cols) >= 3:
+            years = f", {lo or 'start'}–{hi or 'last year'}"
     total = len(df)
     n = total if rows <= 0 else min(rows, total)
     n = min(n, MAX_ROWS)
@@ -48,9 +72,8 @@ def draw(csv_path, rows=50, title=None):
     widths = [max(6, round(len(short(c)) * 1.15), *[len(r[i]) for r in cells]) + 3 for i, c in enumerate(cols)]
     numeric = [n > 0 and all(is_number(r[i]) or r[i] == "" for r in cells) and any(is_number(r[i]) for r in cells) for i in range(len(cols))]
     tw = sum(widths) * CHAR_W                          # width of the table itself
-    fig_w = tw + 0.4
-    fig_w = max(fig_w, (len(title or csv_path.stem) + 22) * CHAR_W * 1.2 * 0.75)    # room for the title
-    head = (title or csv_path.stem.replace("_", " ")) + (f"  (first {n} of {total} rows)" if n < total else f"  ({total} rows)")
+    head = (title or csv_path.stem.replace("_", " ")) + (f"  (first {n} of {total} rows{years})" if n < total else f"  ({total} rows{years})")
+    fig_w = max(tw + 0.4, len(head) * CHAR_W * 1.32 + 0.5)       # the title is bold and 2 pt larger than the cells
     fig_h = (n + 1) * ROW_H + 0.75
     plt.rcParams["svg.fonttype"] = "none"
     fig = plt.figure(figsize=(fig_w, fig_h))
@@ -87,5 +110,7 @@ if __name__ == "__main__":
     ap.add_argument("csv")
     ap.add_argument("--rows", type=int, default=50, help="rows drawn (0 = all, at most 1000)")
     ap.add_argument("--title", default=None)
+    ap.add_argument("--from-year", type=int, default=0)
+    ap.add_argument("--to-year", type=int, default=0)
     a = ap.parse_args()
-    draw(a.csv, a.rows, a.title)
+    draw(a.csv, a.rows, a.title, a.from_year, a.to_year)
