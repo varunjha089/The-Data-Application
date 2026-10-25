@@ -112,6 +112,37 @@ sheet pages can override it in **Your choices** (the project's years, all years,
 (by hand: `python3 03_Annual_Production_plot.py --from-year 1990 --to-year 2025`). Options marked `"for": "plot"` in `app/sheets.py` go to the plot script only; the sheet's data is not made again for them.
 Papers without a source title are left out of the source sheets.
 
+## The report (written with an AI model)
+
+The **Report** page (menu: Project, Report) writes the results chapter of your thesis or paper as **LaTeX**, in the project's folder `Report/`:
+one file per figure and per table in `Report/results/`, so you drop one by deleting its file. Every figure and table gets three paragraphs:
+
+1. **What the plot or table is**, why it matters and its limitation in one or two sentences. This text is the same for every study, so it ships with
+   the application (`steps/report/about.json`) and costs nothing.
+2. **The analysis** of your numbers, and 3. **a short conclusion** (2 to 4 sentences): written by the AI model you choose.
+
+**Set it up once** in Settings, *AI writing (for all projects)*: choose the provider (**Anthropic Claude** or **Google Gemini**), paste your API key and
+choose a model from the list the provider sends. On macOS the key is kept in the **Keychain**; on Windows and Linux in a file in your settings folder
+that only you can read (`ai_keys.json`). The key is never written into a project, a log or a command line. An environment variable
+(`ANTHROPIC_API_KEY`, `GEMINI_API_KEY`) also works. The provider charges you for its use: the page shows how many calls a run needs and a rough
+number of tokens before you start.
+
+**What the model sees:** only the summary tables of the sheet (their first rows), the notes its scripts printed (for example the fitted parameters),
+the main information of the data set, one line you write about the study and, if you tick it, the plot picture. Never your export.
+
+**Safe for your own writing:**
+- `report_manifest.json` remembers every file the application wrote. A file **you edited** is never written again; a file **you deleted** stays
+  deleted (its tick is removed); a file whose data, model and text have not changed is kept without asking the model again (no cost).
+- Every number in the model's text is looked up in the data it was given. Numbers it computed or invented are listed in `report_check.txt` and in a
+  `% CHECK` line at the top of the file, and shown on the page: check them before you submit.
+- **Write without AI** writes paragraph 1 and the figure or table, and leaves the analysis to you.
+
+**Template:** the default report (`Report/report.tex`, yours to edit), or **your own LaTeX template folder** (a university thesis format, a journal
+class): it is copied into `Report/`, the packages the figures and tables need are added, and `\input{results_chapter}` is put before the
+bibliography (move it where the results belong). Files it replaces are moved to `Report/_backup_<date>/` first. If biblatex is set to biber and
+biber does not run on the computer, the copy is switched to bibtex. **Build the PDF** runs latexmk (or pdflatex) if LaTeX is installed; otherwise
+upload the `Report` folder to Overleaf. The folder holds its own copy of the plot pictures, so it can be sent on its own.
+
 ## What the cleaning does
 
 `steps/01_clean_data.py` is an ordinary Python file (it can be run by hand and read on its own). It follows the steps of a documented Power Query cleaning, in order:
@@ -153,7 +184,8 @@ The_Data_Application/
   requirements.txt           packages for the venvs (pandas now; each new plot adds what it needs)
   app/                       the application: server and window (app/web = the interface), projects, set-up, data copy, running the scripts
   steps/01_clean_data.py     step 1 (shared by all projects)
-  steps/sheets/<Sheet>/      the scripts of the 24 sheets (<Sheet>.py) and of their plots (<Sheet>_plot.py)
+  steps/sheets/<Sheet>/      the scripts of the sheets (<Sheet>.py) and of their plots (<Sheet>_plot.py)
+  steps/report/              the report: make_report.py, about.json (paragraph 1 of every figure and table), template/report.tex
 ```
 
 Each project is a folder where **you** put it:
@@ -165,6 +197,8 @@ Each project is a folder where **you** put it:
   data/source_list/          the Scopus Source List you chose for the sheet Subject areas (the newest file is used)
   01_Clean_Data/             results of step 1: cleaned CSV, report, log of the run, copy of the script
   Authors/, 03_Annual_Production/, ...   one folder per sheet that has been generated: its script, CSV, log, and the plot (.png/.svg) if made
+  Report/                    the report: report.tex (or your template), results_chapter.tex, results/<one file per figure and table>.tex,
+                             figures/, report_check.txt (numbers to check), report_log.txt, report_manifest.json (what the application wrote)
   .venv/                     the project's own virtual environment (if you chose "Create a new venv")
 ```
 
@@ -247,6 +281,18 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   `topic_slices.json` in the project folder (written with automatic choices on the first run; format at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`;
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
+
+## Version 0.9.0 (2026-10-25)
+
+- **New page: Report.** Writes the results chapter as LaTeX, one file per figure and table, with three paragraphs each: what the plot or table is
+  and its limitation (the application's own text, no cost), and the analysis and conclusion written by an AI model you choose.
+- **AI writing in Settings:** Anthropic Claude or Google Gemini, your own API key (kept in the macOS Keychain, or in a file only you can read on
+  Windows and Linux; never in a project or a log), and the model chosen from the provider's own list. Only the summary tables of the sheets (and, if
+  you tick it, the plot pictures) are sent.
+- Your edits are kept: a file you changed or deleted is never written again, and unchanged items are not asked again. Every number in the model's
+  text is checked against the data; the ones not found are listed for you to check.
+- Your own LaTeX template folder can be used (the needed packages and the results chapter are added to the copy); **Build the PDF** with latexmk
+  or pdflatex. **Write without AI** gives the same files with the analysis left open.
 
 ## Version 0.8.0 (2026-10-25)
 

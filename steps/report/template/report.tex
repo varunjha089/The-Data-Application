@@ -1,0 +1,35 @@
+% The default report of The Data Application. Edit it freely: the application never writes this file again.
+% The results chapter (results_chapter.tex) and the files in results/ are written by make_report.py; delete a file in results/ to drop that figure or table.
+% Build: pdflatex report.tex (twice), or latexmk -pdf report.tex, or "Build the PDF" on the Report page.
+\documentclass[12pt,a4paper]{report}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage[hidelinks]{hyperref}
+\input{report_info}                % \reporttitle and \reportdate, written by make_report.py from the project
+
+\title{\reporttitle}
+\author{}
+\date{\reportdate}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\listoffigures
+\listoftables
+
+\chapter{Introduction}
+Write the introduction here: the aim of the study, the search in Scopus (query, date, filters) and the cleaning of the data.
+
+\input{results_chapter}
+
+\chapter{Conclusion}
+Write the conclusions here.
+
+\end{document}

@@ -111,7 +111,7 @@ $("switch").onclick = async () => {
 // ---------------------------------------------------------------- the menu on the left (a slider that can be hidden)
 $("sb-toggle").onclick = () => $("workspace").classList.toggle("collapsed");
 function renderNav() {
-  const items = [["Project", [["overview", "Overview", null], ["settings", "Settings", state.project.env.can_clean && state.project.data.exists ? "done" : "stale"]]],
+  const items = [["Project", [["overview", "Overview", null], ["settings", "Settings", state.project.env.can_clean && state.project.data.exists ? "done" : "stale"], ["report", "Report", null]]],
                  ["Step 1", [["clean", "Clean the data", state.project.clean.current ? "done" : (state.project.clean.exists ? "stale" : null)]]]];
   for (const g of sheetsInfo.groups) items.push([g, sheetsInfo.sheets.filter((s) => s.group === g).map((s) => ["sheet:" + s.name, s.title, s.done ? (s.stale ? "stale" : "done") : null])]);
   $("nav").innerHTML = items.map(([title, rows]) => '<div class="nav-title">' + esc(title) + "</div>" +
@@ -137,9 +137,10 @@ function renderAll() {
   $("proj-badge").textContent = p.name; $("proj-badge").title = p.dir;
   renderNav();
   const kind = page.startsWith("sheet:") ? "sheet" : page;
-  for (const id of ["overview", "settings", "clean", "sheet"]) $("page-" + id).classList.toggle("hidden", id !== kind);
+  for (const id of ["overview", "settings", "clean", "sheet", "report"]) $("page-" + id).classList.toggle("hidden", id !== kind);
   if (kind === "overview") renderOverview();
   else if (kind === "settings") renderSettings();
+  else if (kind === "report") renderReport();
   else if (kind === "clean") renderClean();
   else renderSheet(page.slice(6));
 }
@@ -181,6 +182,7 @@ function renderSettings() {
   fillOtherVenvs();
   renderYears();
   renderLook();
+  renderAI();
 }
 function yearsText(y) {
   if (!y) return "";
@@ -443,8 +445,115 @@ async function loadTable(name) {
   $("pg-next").onclick = () => { curPage++; loadTable(name); };
 }
 
+// ---------------------------------------------------------------- AI writing (Settings): provider, key (never shown again), model
+let aiInfo = null;
+async function renderAI() {
+  aiInfo = await api("/api/ai");
+  const cur = aiInfo.provider, pv = aiInfo.providers[cur];
+  $("ai-provider").innerHTML = Object.entries(aiInfo.providers).map(([k, v]) => '<option value="' + k + '"' + (k === cur ? " selected" : "") + ">" + esc(v.label) + "</option>").join("");
+  $("ai-key-info").innerHTML = pv.has_key ? "<b>Key:</b> saved (ending in <code>" + esc(pv.ending) + "</code>; " + esc(pv.where === "keychain" ? "in the macOS Keychain" : pv.where === "file" ? "in the settings folder, readable by you only" : "from the " + pv.where) + ")."
+    : "<b>Key:</b> none yet. Paste one below; it is kept " + (navigator.platform.startsWith("Mac") ? "in the macOS Keychain" : "in your settings folder") + ", never in a project or a log.";
+  $("ai-key-del").classList.toggle("hidden", !pv.has_key || pv.where.startsWith("environment"));
+  $("ai-key-page").href = pv.keys_page;
+  if (!$("ai-model").dataset.loadedFor || $("ai-model").dataset.loadedFor !== cur) {
+    $("ai-model").innerHTML = pv.model ? '<option value="' + esc(pv.model) + '" selected>' + esc(pv.model) + "</option>" : '<option value="">(load the list of models)</option>';
+  }
+  $("ai-images").checked = aiInfo.images;
+  pill("ai-pill", pv.has_key && pv.model ? "ready" : (pv.has_key ? "choose a model" : "no key"), pv.has_key && pv.model ? "ok" : "warn");
+}
+async function loadModels() {
+  const prov = $("ai-provider").value, pv = aiInfo.providers[prov];
+  setMsg("ai-msg", "Asking " + pv.label + " for its models ...", "warn");
+  const r = await api("/api/ai/models", { provider: prov });
+  if (!r.ok) { setMsg("ai-msg", r.message, "bad"); return; }
+  const want = pv.model || pv.suggested;
+  $("ai-model").innerHTML = '<option value="">(choose a model)</option>' + r.models.map((m) => '<option value="' + esc(m.id) + '"' + (m.id === want ? " selected" : "") + ">" + esc(m.label + (m.label !== m.id ? "  (" + m.id + ")" : "")) + "</option>").join("");
+  $("ai-model").dataset.loadedFor = prov;
+  if ($("ai-model").value && $("ai-model").value !== pv.model) await api("/api/ai/settings", { model: $("ai-model").value });
+  setMsg("ai-msg", r.models.length + " models. " + ($("ai-model").value ? "In use: " + $("ai-model").value + "." : "Choose one."), "ok");
+  renderAI();
+}
+$("ai-provider").onchange = async () => { await api("/api/ai/settings", { provider: $("ai-provider").value }); $("ai-model").dataset.loadedFor = ""; setMsg("ai-msg", ""); renderAI(); };
+$("ai-model").onchange = async () => { await api("/api/ai/settings", { model: $("ai-model").value }); setMsg("ai-msg", "Saved: " + ($("ai-model").value || "no model"), "ok"); renderAI(); };
+$("ai-models").onclick = loadModels;
+$("ai-images").onchange = () => api("/api/ai/settings", { images: $("ai-images").checked });
+$("ai-key-save").onclick = async () => {
+  const k = $("ai-key").value.trim();
+  if (!k) { setMsg("ai-msg", "Paste the key first.", "warn"); return; }
+  setMsg("ai-msg", "Saving and testing the key ...", "warn");
+  const r = await api("/api/ai/key", { provider: $("ai-provider").value, key: k });
+  $("ai-key").value = "";                                   // the key is never kept in the page
+  setMsg("ai-msg", r.message, r.ok ? "ok" : "bad");
+  await renderAI();
+  if (r.ok && !aiInfo.providers[aiInfo.provider].model) loadModels();
+};
+$("ai-key-del").onclick = async () => { const r = await api("/api/ai/key", { provider: $("ai-provider").value, delete: true }); setMsg("ai-msg", r.message, "ok"); renderAI(); };
+
+// ---------------------------------------------------------------- the report: template, figures and tables, write with or without AI, build the PDF
+let rp = null;
+async function renderReport() {
+  rp = await api("/api/report/state");
+  if (rp.error) return;
+  const a = rp.ai, ready = a.has_key && a.model;
+  $("rp-ai").innerHTML = "<b>AI model:</b> " + (ready ? esc(a.label) + ", <code>" + esc(a.model) + "</code>" + (a.images ? ", with the plot pictures" : "") : '<span style="color: var(--bad)">' + (a.has_key ? "no model chosen" : "no API key") + "</span>") +
+    ' (<a href="#settings" id="rp-go-settings">Settings, AI writing</a>)';
+  $("rp-go-settings").onclick = (e) => { e.preventDefault(); selectPage("settings"); };
+  if (document.activeElement !== $("rp-study")) $("rp-study").value = rp.options.study || "";
+  $("rp-template").innerHTML = "<b>Template:</b> " + (rp.options.template === "default" ? "the default report" : "<code>" + esc(rp.options.template) + "</code>") +
+    "; main file <code>Report/" + esc(rp.options.main) + "</code>" + (rp.main_exists ? "" : " (made when you first write)") + ".";
+  const n = rp.items.filter((it) => it.selected).length, e = rp.estimate;
+  $("rp-estimate").innerHTML = "<b>" + n + "</b> figures and tables ticked. Writing with AI now asks the model <b>" + e.calls + "</b> times (about " +
+    Math.round(e.tokens_in / 1000) + " thousand tokens in and " + Math.round(e.tokens_out / 1000) + " thousand out; the files that are unchanged or edited by you are not asked again).";
+  $("rp-write").disabled = !ready || !n || !!polling;
+  $("rp-write").title = ready ? "" : "Add an API key and choose a model in Settings, AI writing";
+  $("rp-write-plain").disabled = !n || !!polling;
+  $("rp-build").disabled = !rp.main_exists || !rp.tex || !!polling;
+  $("rp-build").title = rp.tex ? "" : "No LaTeX on this computer: install MacTeX, MiKTeX or TeX Live, or upload the Report folder to Overleaf";
+  $("rp-pdf").classList.toggle("hidden", !rp.pdf);
+  $("rp-pdf").href = "/files/Report/" + encodeURIComponent(rp.options.main.replace(/\.tex$/, ".pdf")) + "?download=1";
+  $("rp-check").classList.toggle("hidden", !rp.check_file);
+  $("rp-check").href = "/files/Report/report_check.txt?download=1";
+  $("rp-log").classList.toggle("hidden", !rp.exists);
+  $("rp-log").href = "/files/Report/report_log.txt?download=1";
+  const written = rp.items.filter((it) => it.file_state === "written" || it.file_state === "edited").length;
+  pill("rp-pill", written ? written + " written" : "not written yet", written ? "ok" : "warn");
+  $("rp-count").textContent = "(" + n + " ticked of " + rp.items.filter((it) => it.exists).length + " that exist; " + rp.items.length + " possible)";
+  let html = "<thead><tr><th></th><th>Figure or table</th><th>Sheet</th><th>State</th></tr></thead><tbody>";
+  for (const g of rp.groups) {
+    const rows = rp.items.filter((it) => it.group === g);
+    if (!rows.length) continue;
+    html += '<tr><td colspan="4"><b>' + esc(g) + "</b></td></tr>" + rows.map((it) => {
+      const note = it.failed ? '<span style="color: var(--bad)">failed: ' + esc(it.failed) + "</span>" : esc(it.note) + (it.check.length ? ' &mdash; <span style="color: var(--warn)">numbers to check: ' + esc(it.check.join(", ")) + "</span>" : "");
+      return '<tr' + (it.exists ? "" : ' class="info"') + '><td><input type="checkbox" data-stem="' + esc(it.stem) + '"' + (it.selected ? " checked" : "") + (it.exists ? "" : " disabled") + "></td><td>" +
+        (it.kind === "fig" ? "Figure: " : "Table: ") + esc(it.title) + "</td><td>" + esc(it.sheet_title) + "</td><td>" + note + "</td></tr>";
+    }).join("");
+  }
+  $("rp-items").innerHTML = html + "</tbody>";
+  document.querySelectorAll("#rp-items [data-stem]").forEach((c) => c.onchange = () => saveItems());
+}
+async function saveItems(list) {
+  const items = list || Array.from(document.querySelectorAll("#rp-items [data-stem]")).filter((c) => c.checked).map((c) => c.dataset.stem);
+  await api("/api/report/options", { items });
+  renderReport();
+}
+$("rp-all").onclick = () => saveItems(rp.items.filter((it) => it.exists && it.file_state !== "deleted").map((it) => it.stem));
+$("rp-none").onclick = () => saveItems([]);
+$("rp-study").onchange = async () => { await api("/api/report/options", { study: $("rp-study").value }); setMsg("rp-study-msg", "saved", "ok"); };
+$("rp-tpl").onclick = async () => {
+  const r = await api("/api/browse", { kind: "folder", title: "template" });
+  if (!r.path) { if (r.error) setMsg("rp-msg", r.error, "warn"); return; }
+  const t = await api("/api/report/template", { path: r.path });
+  setMsg("rp-msg", t.message, t.ok ? "ok" : "bad");
+  renderReport();
+};
+$("rp-tpl-default").onclick = async () => { const t = await api("/api/report/default", {}); setMsg("rp-msg", t.message, t.ok ? "ok" : "bad"); renderReport(); };
+$("rp-write").onclick = () => runJob("/api/report/write", { ai: true, rewrite: $("rp-rewrite").checked }, "rp-msg");
+$("rp-write-plain").onclick = () => runJob("/api/report/write", { ai: false, rewrite: $("rp-rewrite").checked }, "rp-msg");
+$("rp-build").onclick = () => runJob("/api/report/build", {}, "rp-msg");
+$("rp-folder").onclick = () => api("/api/open", { which: "report" });
+
 // ---------------------------------------------------------------- jobs (set-up, install, clean, sheets, plots): poll the log while one runs
-const BUSY_BUTTONS = ["env-go", "env-install", "env-fix", "browse", "choose", "clean", "switch", "ov-all", "ov-plots", "sh-run"];
+const BUSY_BUTTONS = ["env-go", "env-install", "env-fix", "browse", "choose", "clean", "switch", "ov-all", "ov-plots", "sh-run", "rp-write", "rp-write-plain", "rp-build", "rp-tpl", "rp-tpl-default"];
 function setBusy(busy) { for (const id of BUSY_BUTTONS) if ($(id)) $(id).disabled = busy; document.querySelectorAll("#sh-plot-buttons button").forEach((b) => b.disabled = busy); }
 async function runJob(url, body, msgId) {
   setMsg(msgId, "");

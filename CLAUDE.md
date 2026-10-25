@@ -54,6 +54,11 @@ app/sheets.py             registry of the sheets: group, title, description, nee
                           a file the user chooses (_INPUTS; input_file = the newest one)
 app/years.py              the project's years in the plots: presets last10 / last5 / all / custom, resolved once and SAVED; roll_forward
 app/look.py               the project's plot look -> arguments of steps/common/plotlook.py; table_rows = rows in table pictures
+app/ai.py                 AI writing: provider + model per provider (app_config.json "ai", never the key), API keys (macOS Keychain via `security -i` on
+                          stdin; elsewhere or with THE_DATA_APP_HOME: <settings>/ai_keys.json, mode 600; env ANTHROPIC_API_KEY / GEMINI_API_KEY), model lists
+app/report.py             the Report page: catalog of figures/tables (sheets + steps/report/about.json), selection in project.json "report", file states
+                          from Report/report_manifest.json (edited / deleted are never written again), template import (backup, packages, \input{results_chapter},
+                          biber -> bibtex if biber fails), write (runs make_report.py, key only in env TDA_AI_KEY), build (latexmk / pdflatex, also /Library/TeX/texbin)
 app/sample.py             made-up Scopus export and the "Sample project" (window button, `sample` command, tests), with a made-up Source List
 app/update.py             self-update like a desktop program: daily check of GitHub's latest release, install (git fast-forward or release ZIP + backup),
                           the new version's quick tests, rollback, restart; THE_DATA_APP_UPDATE_API points it elsewhere in tests
@@ -66,6 +71,9 @@ steps/01_clean_data.py    the cleaning (text hygiene, documented Power Query ste
 steps/common/             names.py (countries, institutions, parent organisations, country fallback), plotlook.py (plot-look wrapper),
                           table_image.py (a CSV as a PNG/SVG table picture); copied into <project>/common/
 steps/sheets/<Sheet>/     <Sheet>.py (data) and <Sheet>_plot.py (plots); a .json next to a script is copied with it
+steps/report/             make_report.py (run in <project>/Report with the project's python: LaTeX per item, Anthropic Messages / Gemini generateContent
+                          over urllib, JSON {analysis, conclusion}, number check), about.json (paragraph 1 of every plot/table: fixed, never asked
+                          from a model), template/report.tex (the default report)
 tests/test_app.py         fast tests (standard library) + a full run of the sample project (needs pandas, numpy, matplotlib)
 docs/                     cluster-label notes are local (*.local.*); icon/make_icon.py draws the app icon
 future/                   finished code taken out of the menu (kept for later)
@@ -90,6 +98,12 @@ future/                   finished code taken out of the menu (kept for later)
 - **A year axis**: use the helper block of the year plots (`year_args`, `year_window`, `year_label`, `year_axis`, `year_rows`) and add the sheet to the `_year_options`
   loop in `app/sheets.py` (choose whether it follows the project's years or draws all years by default).
 - **A new kind of step** (like the cleaning): a function in `pipeline.py`, a job in `server.py`, a page in `index.html` / `app.js`.
+- **A plot or table in the report**: an entry `plot:<file>` / `table:<csv>` in `steps/report/about.json` (title, paragraph 1 = what it is, why it
+  matters, its limitation; for a table optionally cols, n, rename, query, spec). Plots without an entry still appear (title + the sheet's description).
+- **AI calls**: only from `steps/report/make_report.py` (plain urllib, no SDK: the app is standard library only and supports two providers). The key
+  travels only in the environment variable TDA_AI_KEY; never in arguments, logs, run_info.json or project.json (a test checks every file of Report/).
+  Anthropic: `anthropic-version: 2026-10-21` (no temperature/top_p/top_k), `output_config.format` json_schema, server-side fallbacks for the models in
+  FALLBACK_MODELS. Tests use `THE_DATA_APP_ANTHROPIC_URL` (a local stand-in, `FakeAI`) and `THE_DATA_APP_KEYCHAIN` (a throw-away keychain file).
 - Every feature: a test in `tests/test_app.py`, an entry in `README.md`.
 - **The updater** (`app/update.py`) is tested by running real updates in throw-away clones against a local stand-in for GitHub (`FakeGitHub` in the tests;
   `THE_DATA_APP_UPDATE_API` points the check at it). The update's own check runs the new version's quick tests with `THE_DATA_APP_UPDATING=1`, which makes

@@ -148,6 +148,26 @@
       </section>
 
       <section class="card">
+        <div class="head"><h2>AI writing (for all projects)</h2><span id="ai-pill" class="pill"></span></div>
+        <p>The <b>Report</b> page can ask an AI model to write the analysis of every figure and table. The model is sent only the summary tables of the
+           sheets (their first rows), the notes of the scripts and, if you tick it below, the plot pictures; never your export. The provider charges you for its use.</p>
+        <div class="row"><label><b>Provider</b> <select id="ai-provider" aria-label="AI provider"></select></label></div>
+        <div id="ai-key-info" class="info"></div>
+        <div class="row">
+          <input type="password" id="ai-key" placeholder="Paste the API key here" autocomplete="off" aria-label="API key" style="width:22em">
+          <button id="ai-key-save" class="primary">Save the key</button>
+          <button id="ai-key-del" class="hidden">Remove the key</button>
+          <a id="ai-key-page" href="#" target="_blank" rel="noopener">Where do I get a key?</a>
+        </div>
+        <div class="row">
+          <label><b>Model</b> <select id="ai-model" aria-label="Model"></select></label>
+          <button id="ai-models">Load the list of models</button>
+        </div>
+        <div class="row"><label><input type="checkbox" id="ai-images"> Also send the plot pictures (the model can describe the plots better; uses more tokens)</label></div>
+        <div id="ai-msg" class="msg"></div>
+      </section>
+
+      <section class="card">
         <div class="head"><h2>Main data</h2><span id="data-pill" class="pill">none</span></div>
         <p>Choose the Scopus export (CSV). A <b>copy</b> is kept in the project's <code>data/raw</code> folder; your original file is never changed.</p>
         <div id="data-info" class="info"></div>
@@ -157,6 +177,41 @@
           <input type="file" id="file" accept=".csv,text/csv" class="hidden">
         </div>
         <div id="data-msg" class="msg"></div>
+      </section>
+    </section>
+
+    <!-- ---------------- page: the report (LaTeX, one file per figure and table, the analysis written by an AI model) -->
+    <section class="panel hidden" id="page-report">
+      <section class="card">
+        <div class="head"><h2>Report</h2><span id="rp-pill" class="pill"></span></div>
+        <p>Writes the results chapter of your report as LaTeX, in the project's folder <code>Report</code>: one file per figure and table, so you can drop one
+           by deleting its file. Each gets three paragraphs: what the plot or table is and its limits (the application's own text), the analysis of
+           your numbers and a short conclusion (written by the AI model). <b>Your edits are kept</b>: a file you changed or deleted is never written again.</p>
+        <div id="rp-ai" class="info"></div>
+        <div class="info"><label><b>What the study is about</b> (one line for the model, for example <i>water monitoring with remote sensing, Scopus 2016&ndash;2025</i>)<br>
+          <input type="text" id="rp-study" maxlength="300" style="width:100%" aria-label="What the study is about"></label> <span id="rp-study-msg" class="msg"></span></div>
+        <div id="rp-template" class="info"></div>
+        <div class="row">
+          <button id="rp-tpl">Choose a LaTeX template folder&hellip;</button>
+          <button id="rp-tpl-default">Use the default template</button>
+        </div>
+        <div id="rp-estimate" class="info"></div>
+        <div class="row">
+          <button id="rp-write" class="primary">Write with AI</button>
+          <button id="rp-write-plain" title="Writes the first paragraph and the figure or table; the analysis is left for you">Write without AI</button>
+          <label><input type="checkbox" id="rp-rewrite"> ask the model again even if nothing has changed</label>
+        </div>
+        <div class="row">
+          <button id="rp-build">Build the PDF</button>
+          <a id="rp-pdf" class="button hidden" href="#">Download the PDF</a>
+          <a id="rp-check" class="button hidden" href="#">Numbers to check</a>
+          <a id="rp-log" class="button hidden" href="#">Download the log</a>
+          <button id="rp-folder">Show the folder</button>
+        </div>
+        <div id="rp-msg" class="msg"></div>
+        <h3>Figures and tables <span id="rp-count" class="info"></span></h3>
+        <div class="row"><button id="rp-all">Tick all that exist</button><button id="rp-none">Untick all</button></div>
+        <div class="table-wrap" style="max-height:none"><table id="rp-items"></table></div>
       </section>
     </section>
 

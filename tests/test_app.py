@@ -8,6 +8,7 @@ the application lists was written, that the run records exist, and that the plot
 """
 import csv
 import http.client
+import http.server
 import json
 import os
 import re
@@ -202,6 +203,41 @@ class FakeGitHub:
 
 @unittest.skipIf(shutil.which("git") is None or not (ROOT / ".git").exists() or os.environ.get("THE_DATA_APP_UPDATING"),
                  "needs git and a git checkout (and does not run inside an update's own check)")
+class FakeAI:
+    """a stand-in for the Anthropic API on 127.0.0.1: lists one model and answers every report item with JSON (one invented number in it)"""
+    def __init__(self):
+        self.requests = []
+        fake = self
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def _send(self, data):
+                body = json.dumps(data).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def do_GET(self):
+                self._send({"data": [{"id": "claude-test", "display_name": "Claude Test"}], "has_more": False})
+
+            def do_POST(self):
+                req = json.loads(self.rfile.read(int(self.headers["Content-Length"])).decode("utf-8"))
+                fake.requests.append({"headers": {k.lower(): v for k, v in self.headers.items()}, "body": req})
+                text = req["messages"][0]["content"][-1]["text"]
+                n = re.search(r"Documents,(\d+)", text)
+                answer = {"analysis": f"FAKE ANALYSIS: the data set holds {n.group(1) if n else 0} documents [REF]; *Remote Sensing* leads with 5% & more, and 98765.43 is invented.",
+                          "conclusion": "FAKE CONCLUSION: the field grows."}
+                self._send({"content": [{"type": "thinking", "thinking": ""}, {"type": "text", "text": json.dumps(answer)}], "stop_reason": "end_turn",
+                            "usage": {"input_tokens": 100, "output_tokens": 50}})
+        self.httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+        self.url = f"http://127.0.0.1:{self.httpd.server_address[1]}"
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+
+
 class Updates(unittest.TestCase):
     """the updater, run inside throw-away copies of this repository (never on this folder)"""
 
@@ -413,6 +449,63 @@ class FullRun(unittest.TestCase):
         self.assertIn(first["EID"], eids)
         self.assertNotIn("2-s2.0-99999999999", eids)
 
+    def check_report(self, pr, log):
+        """the report: written without AI, then by a (stand-in) model; a file the user edited or deleted is kept; the key reaches no file"""
+        from app import ai, report
+        fake = FakeAI()
+        os.environ["THE_DATA_APP_ANTHROPIC_URL"] = fake.url
+        ok, msg = report.write(pr, log.append, use_ai=False)
+        self.assertTrue(ok, msg + "\n" + "\n".join(log[-20:]))
+        rp = pr.dir / "Report"
+        self.assertTrue((rp / "report.tex").exists() and (rp / "results_chapter.tex").exists())
+        self.assertGreater(sum(1 for it in report.state(pr)["items"] if it["file_state"] == "written"), 40)
+        key = "sk-test-" + "k" * 30
+        self.assertTrue(ai.set_key("anthropic", key)[0])
+        ok, models = ai.list_models("anthropic")
+        self.assertTrue(ok and models[0]["id"] == "claude-test", models)
+        ai.save_settings({"provider": "anthropic", "model": "claude-test"})
+        edited, gone = rp / "results" / "fig_annual_trend.tex", rp / "results" / "fig_lotka.tex"
+        edited.write_text(edited.read_text(encoding="utf-8") + "% my own note\n", encoding="utf-8")
+        gone.unlink()
+        st = {it["stem"]: it for it in report.state(pr)["items"]}
+        self.assertEqual((st["fig_lotka"]["file_state"], st["fig_lotka"]["selected"]), ("deleted", False))
+        self.assertEqual(st["fig_annual_trend"]["file_state"], "edited")
+        ok, msg = report.write(pr, log.append, use_ai=True)
+        self.assertTrue(ok, msg + "\n" + "\n".join(log[-20:]))
+        text = (rp / "results" / "fig_annual_production.tex").read_text(encoding="utf-8")
+        self.assertIn("FAKE ANALYSIS", text)
+        self.assertIn("Figure~\\ref{fig:fig_annual_production}", text)
+        self.assertIn("\\emph{Remote Sensing}", text)
+        self.assertIn("5\\% \\& more", text)
+        self.assertIn("% CHECK", text)                                  # the invented number is flagged, the true one is not
+        self.assertIn("98765.43", text.splitlines()[3])
+        self.assertIn("% my own note", edited.read_text(encoding="utf-8"))
+        self.assertFalse(gone.exists())
+        for r in fake.requests:
+            self.assertEqual(r["headers"].get("x-api-key"), key)
+            self.assertNotIn("temperature", r["body"])
+            self.assertIn("output_config", r["body"])
+        for f in rp.rglob("*"):
+            if f.is_file() and f.suffix in (".txt", ".json", ".tex", ".log"):
+                self.assertNotIn(key, f.read_text(encoding="utf-8", errors="replace"), f.name)
+        n = len(fake.requests)
+        ok, msg = report.write(pr, log.append, use_ai=True)                 # nothing changed: the model is not asked again
+        self.assertTrue(ok, msg)
+        self.assertEqual(len(fake.requests), n)
+        tpl = TMP / "template"                                              # a template of the user's: packages and the results chapter are added
+        tpl.mkdir(exist_ok=True)
+        (tpl / "thesis.tex").write_text("\\documentclass{report}\n\\begin{document}\nMy thesis.\n\\end{document}\n", encoding="utf-8")
+        ok, msg = report.use_template(pr, str(tpl))
+        self.assertTrue(ok, msg)
+        main = (rp / "thesis.tex").read_text(encoding="utf-8")
+        self.assertIn("\\input{results_chapter}", main)
+        self.assertIn("\\usepackage{tabularx}", main)
+        self.assertTrue(any(p.name.startswith("_backup_") and (p / "report.tex").exists() for p in rp.iterdir()))
+        if report.tex_tool("pdflatex"):
+            ok, msg = report.build(pr, log.append)
+            self.assertTrue(ok, msg + "\n" + "\n".join(log[-30:]))
+        fake.httpd.shutdown()
+
     def test_everything(self):
         pr, err = sample.create_sample_project(str(TMP / "projects"))
         self.assertIsNotNone(pr, err)
@@ -440,6 +533,7 @@ class FullRun(unittest.TestCase):
             if not (folder / "run_info.json").exists():
                 missing.append(f"{spec['name']}/run_info.json")
         self.assertEqual(missing, [])
+        self.check_report(pr, log)
         long_decimals = []                                          # every number in a sheet's tables has at most 2 decimal places
         for spec in sheets.SHEETS:
             for path in (pr.dir / spec["name"]).glob("*.csv"):

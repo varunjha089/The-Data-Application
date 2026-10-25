@@ -5,7 +5,8 @@ import subprocess
 import sys
 
 TITLES = {"venv": "Select the folder of your Python virtual environment", "project": "Choose the folder in which the project is saved",
-          "existing": "Choose the project folder (it contains project.json)"}
+          "existing": "Choose the project folder (it contains project.json)",
+          "template": "Choose the folder of your LaTeX template (it contains the main .tex file)"}
 TITLE_FILE = "Select the Scopus CSV export"
 
 

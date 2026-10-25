@@ -16,7 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from . import __version__, config, dataset, envsetup, look, native, pipeline, project as projects, sample, sheets as sheetlist, update, window, years
+from . import __version__, ai, config, dataset, envsetup, look, native, pipeline, project as projects, report, sample, sheets as sheetlist, update, window, years
 from .jobs import Jobs, stream
 from .paths import REQUIREMENTS, ROOT, STEPS, default_location
 
@@ -134,6 +134,12 @@ class App:
 
     def job_all(self, pr, plots):
         return self.jobs.start("sheet", lambda log: pipeline.run_all(pr, log, plots))
+
+    def job_report(self, pr, use_ai, rewrite):
+        return self.jobs.start("report", lambda log: report.write(pr, log, use_ai, rewrite))
+
+    def job_build(self, pr):
+        return self.jobs.start("report", lambda log: report.build(pr, log))
 
     _rows_cache = {}
 
@@ -335,6 +341,10 @@ def make_handler(app):
                 return self._send(200, app.preview(pr) if pr else {"exists": False})
             if p == "/api/report":
                 return self._send(200, {"text": pr.clean_report.read_text(encoding="utf-8") if pr and pr.clean_report.exists() else ""})
+            if p == "/api/ai":                                         # AI writing: provider, model, whether a key is saved (never the key)
+                return self._send(200, ai.status())
+            if p == "/api/report/state":
+                return self._send(200, report.state(pr) if pr else {"error": "no project is open"})
             if p == "/api/sheets":
                 return self._send(200, app.sheets_info(pr) if pr else {"sheets": [], "groups": [], "clean_ready": False})
             if p == "/api/sheet/table":
@@ -346,7 +356,7 @@ def make_handler(app):
                 return self._send(200, app.table(pr, name, csv_file, max(int(q.get("page", ["0"])[0]), 0), min(max(int(q.get("size", ["50"])[0]), 1), 500)))
             if p.startswith("/files/"):                              # pictures and tables of a sheet: /files/<sheet>/<file>
                 parts = p[len("/files/"):].split("/")
-                if pr is None or len(parts) != 2 or (sheetlist.get(parts[0]) is None and parts[0] != "01_Clean_Data"):
+                if pr is None or len(parts) != 2 or (sheetlist.get(parts[0]) is None and parts[0] not in ("01_Clean_Data", report.FOLDER)):
                     return self._send(404, {"error": "not found"})
                 fname = Path(parts[1]).name
                 path = pr.dir / parts[0] / fname
@@ -432,6 +442,21 @@ def make_handler(app):
                 self._send(200, {"ok": True})
                 threading.Thread(target=app.httpd.shutdown, daemon=True).start()
                 return
+            if p == "/api/ai/settings":
+                return self._send(200, {"ok": True, "settings": ai.save_settings(body), "status": ai.status()})
+            if p == "/api/ai/key":
+                prov = body.get("provider", "")
+                if body.get("delete"):
+                    ai.delete_key(prov)
+                    return self._send(200, {"ok": True, "message": "The key was removed.", "status": ai.status()})
+                ok, msg = ai.set_key(prov, body.get("key", ""))
+                if ok:                                             # a new key is tested at once by asking for the provider's models
+                    good, models = ai.list_models(prov)
+                    msg = msg + (" The key works: %d models available." % len(models) if good else " But: " + models)
+                return self._send(200, {"ok": ok, "message": msg, "status": ai.status()})
+            if p == "/api/ai/models":
+                ok, models = ai.list_models(body.get("provider", ""))
+                return self._send(200, {"ok": ok, "models": models if ok else [], "message": "" if ok else models})
             if p == "/api/browse":
                 path, err = native.browse(body.get("kind", "folder"), body.get("title", "venv"))
                 return self._send(200, {"path": path, "error": err})
@@ -518,8 +543,20 @@ def make_handler(app):
                 return self._send(200, {"ok": True, "look": look.save(pr, body.get("values") or {})})
             if p == "/api/clean":
                 return self._send(200, {"started": app.job_clean(pr)})
+            if p == "/api/report/options":
+                report.save_options(pr, body)
+                return self._send(200, report.state(pr))
+            if p in ("/api/report/template", "/api/report/default"):
+                if app.busy():
+                    return self._send(200, {"ok": False, "message": "A task is still running: wait until it has finished."})
+                ok, msg = report.use_template(pr, body.get("path", "")) if p.endswith("template") else report.use_default(pr)
+                return self._send(200, {"ok": ok, "message": msg})
+            if p == "/api/report/write":
+                return self._send(200, {"started": app.job_report(pr, bool(body.get("ai", True)), bool(body.get("rewrite")))})
+            if p == "/api/report/build":
+                return self._send(200, {"started": app.job_build(pr)})
             if p == "/api/open":
-                where = {"raw": pr.raw, "clean": pr.clean, "project": pr.dir, "app": ROOT}.get(body.get("which"), pr.dir)
+                where = {"raw": pr.raw, "clean": pr.clean, "project": pr.dir, "app": ROOT, "report": report.folder(pr)}.get(body.get("which"), pr.dir)
                 if sheetlist.get(body.get("sheet", "")):
                     where = pr.dir / body["sheet"]
                 where.mkdir(parents=True, exist_ok=True)
