@@ -131,6 +131,9 @@ class Pieces(unittest.TestCase):
         learned = names.learn_institution_countries(["Wuhan University, Wuhan, China", "School of Geography, Wuhan University, Wuhan, 430072, China", "Wuhan University, Wuhan"])
         self.assertEqual(names.country_with_fallback("Wuhan University, Wuhan", learned), ("China", "institution"))
         self.assertEqual(names.country_with_fallback("Wuhan University, Wuhan, China", learned), ("China", "address"))
+        for empty in ("", " ", ",", " , "):                 # Scopus writes "; ; ;" for some correspondence addresses (crashed 0.4.0)
+            self.assertIsNone(names.institution_of_affiliation(empty))
+            self.assertEqual(names.country_with_fallback(empty, learned), (None, None))
         once = names.learn_institution_countries(["Lone Institute, Paris, France", "Lone Institute, Paris"])
         self.assertEqual(names.country_with_fallback("Lone Institute, Paris", once), (None, None))            # one address is not enough
 

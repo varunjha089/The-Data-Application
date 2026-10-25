@@ -79,6 +79,8 @@ def institution_of_affiliation(affiliation):
     if affiliation.strip().lower().startswith("equal contrib"):          # a Scopus note, not an address
         return None
     parts = [p.strip() for p in affiliation.split(",") if p.strip()]
+    if not parts:                                      # an empty address (Scopus writes "; ; ;" for some correspondence addresses)
+        return None
     for i, p in enumerate(parts):
         if "univ" in p.lower():
             if p.lower().rstrip(".") in {t.rstrip(".") for t in TRUNC} and i + 1 < len(parts):

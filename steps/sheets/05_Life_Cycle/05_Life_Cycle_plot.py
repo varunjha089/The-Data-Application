@@ -116,8 +116,14 @@ year_axis(ax, t["Year"])
 ax.set_xlabel(xlab)
 ax.set_ylabel("Cumulative documents")
 ax.legend(frameon=False, loc="center left", bbox_to_anchor=(0.01, 0.45))            # the middle left is empty: the curve is low there and the numbers are above
-fit = f"\nfit on the years up to {int(p['Last year in the fit'])}" if "Last year in the fit" in p.index else ""
-ax.text(0.02, 0.96, f"K = {p['k']:.0f}   r = {p['r']:.3f}   t0 = {p['t0']:.1f}\nR2 = {p['R2']:.4f}\npeak output = {p['Peak annual output']:.0f} per year\n90% of K reached in {p['Year 90% of K is reached']:.1f}{fit}",
+fit = f"\nfit on the years up to {int(float(p['Last year in the fit']))}" if "Last year in the fit" in p.index else ""
+if str(p.get("Saturation visible", "yes")) == "no":             # the curve has not turned yet: K, t0, the peak are not estimable
+    label = (f"Growth is still accelerating: the curve has not turned yet,\nso the ceiling K, the peak and the 90% year cannot be estimated\n"
+             f"from these years (the fit would put the turn in {float(p['t0']):.0f}).\nr = {float(p['r']):.3f} per year   R2 = {float(p['R2']):.4f}{fit}")
+else:
+    label = (f"K = {float(p['k']):.0f}   r = {float(p['r']):.3f}   t0 = {float(p['t0']):.1f}\nR2 = {float(p['R2']):.4f}\npeak output = {float(p['Peak annual output']):.0f} per year\n"
+             f"90% of K reached in {float(p['Year 90% of K is reached']):.1f}{fit}")
+ax.text(0.02, 0.96, label,
         transform=ax.transAxes, va="top", fontsize=11)
 ax.set_title("Life cycle of scientific production")
 save(fig, "life_cycle")

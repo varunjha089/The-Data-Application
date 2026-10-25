@@ -222,6 +222,16 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`).
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.4.1 (2026-10-25)
+
+- **Fix: the cleaning stopped with `IndexError`** on exports where a correspondence address is empty (`; ; ;`): the country fill-in of 0.3.0 asked for
+  the institution of an empty address. Empty addresses now simply have no institution. Found on a real 3,013-record export; a test covers it.
+- **Life cycle: no invented ceiling.** When the S-curve has not turned yet (its inflection point lies after the fitted years), the growth is still
+  accelerating and the data cannot say where it will level off: the plot now says so (with r and R2) instead of printing a meaningless K, peak and 90% year;
+  the parameters table has a new row, Saturation visible (yes/no).
+- **macOS: a copy of the `.app` outside the application folder works** (for Launchpad or Applications): it starts the program from the folder remembered at
+  the last start from there, and explains what to do when that folder is unknown.
+
 ## Version 0.4.0 (2026-10-25)
 
 - **Updates by itself** (see *Updates* above): daily check of the latest GitHub release, an update window with the release notes, install through git or

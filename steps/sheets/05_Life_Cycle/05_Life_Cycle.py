@@ -5,6 +5,8 @@ Also: R2 = 1 - SSE / DEVSQ(Cumulative); Peak annual output = k * r / 4; Year 90%
 Incomplete years are left out of the fit: the current year is still being indexed and early-access papers carry next year's date, so their few papers would
 bend the S-curve down and make the field look saturated. By default the fit uses the years up to the last complete year (the year before the current one);
 --fit-to-year Y uses the years up to Y. The table keeps every year (column In Fit says which were used) and the fitted curve is drawn for all of them.
+Saturation visible = yes only when the inflection point t0 lies within the fitted years. Before the curve has turned, the data cannot tell where it will level
+off: K, t0, the peak and the 90% year are then extrapolations (they can run to absurd values) and the plot says so instead of printing them.
 Input : 01_Clean_Data/clean_main_data.csv        Output: 05_Life_Cycle.csv (the table) and 05_Life_Cycle_parameters.csv (k, r, t0, SSE, R2, ...)
 Run   : python3 05_Life_Cycle.py [--fit-to-year Y]
 """
@@ -99,7 +101,8 @@ table = pd.DataFrame({"Year": years, "Documents": documents, "Cumulative": cumul
 left = years[~use]
 params = pd.DataFrame([("k", k), ("r", r), ("t0", t0), ("SSE", sse), ("R2", 1 - sse / ((fc - fc.mean()) ** 2).sum()),
                        ("Peak annual output", k * r / 4), ("Year 90% of K is reached", t0 + math.log(9) / r),
-                       ("Last year in the fit", int(fy[-1])), ("Years left out of the fit", len(left))], columns=["Parameter", "Value"])
+                       ("Last year in the fit", int(fy[-1])), ("Years left out of the fit", len(left)),
+                       ("Saturation visible", "yes" if t0 <= fy[-1] else "no")], columns=["Parameter", "Value"])
 print(f"fit on {fy[0]}-{fy[-1]}" + (f"; left out (incomplete): {', '.join(str(y) for y in left)}" if len(left) else ""))
 print(params.to_string(index=False))
 write(table)
