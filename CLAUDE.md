@@ -30,13 +30,19 @@ settings folder (`app/paths.py`: `APP_DATA`; override with `THE_DATA_APP_HOME`).
   (`dataset.validate`, `pipeline.explain_failure`).
 - **Every run is recorded** in its folder: `<Sheet>_log.txt` / `<Sheet>_plot_log.txt` and `run_info.json` (version, script SHA-256, arguments, input SHA-256, choices,
   years, plot look, software). Keep both when changing `pipeline.py`.
+- **Every table also has a picture.** After a sheet's data is made (and after its plot, when the picture is missing, older than the CSV, or the sheet has a
+  year setting), each of its CSVs is drawn as `<table>_table.png` / `.svg` by `steps/common/table_image.py`: the first `look.table_rows` rows, the years the
+  sheet's plots draw (`sheets.plot_years`), cells exactly as in the CSV. A new sheet gets this without any code.
 - **Large, plain text** in the interface (the owner wears spectacles). On macOS edit files with Python or the Edit tool (BSD `sed -i` differs).
+- **Quote paths in the shell**: the folder holding the repository may have a space in its name.
 
 ## Layout
 
 ```
 the_data_app.py           entry point -> app.cli.main (no command = open the window)
 The Data Application.app  run.pyw  run.bat  run.command  run.sh      launchers (macOS bundle, Windows without console, terminal)
+                          the .app's launcher writes its folder to <settings>/app_folder.txt on every start from there, so a COPY of the .app elsewhere still
+                          finds the program; its icon is Contents/Resources/AppIcon.icns (drawn by docs/icon/make_icon.py)
 app/__init__.py           __version__
 app/paths.py              ROOT, STEPS, REQUIREMENTS; APP_DATA / APP_CONFIG / APP_LOG (the user's settings folder)
 app/config.py             atomic JSON read/write, app_config.json, rel()/absolute() for stored paths
@@ -46,7 +52,7 @@ app/dataset.py            validate an export (plain-words reasons: Excel file, W
 app/pipeline.py           clean_data, run_sheet, run_plot, run_all: copy steps/... into the project, run with the project's python, log, run_info.json
 app/sheets.py             registry of the sheets: group, title, description, needs, extra CSVs, plots, options (_OPTIONS), per-plot sheets
 app/years.py              the project's years in the plots: presets last10 / last5 / all / custom, resolved once and SAVED; roll_forward
-app/look.py               the project's plot look -> arguments of steps/common/plotlook.py
+app/look.py               the project's plot look -> arguments of steps/common/plotlook.py; table_rows = rows in table pictures
 app/sample.py             made-up Scopus export and the "Sample project" (window button, `sample` command, tests)
 app/update.py             self-update like a desktop program: daily check of GitHub's latest release, install (git fast-forward or release ZIP + backup),
                           the new version's quick tests, rollback, restart; THE_DATA_APP_UPDATE_API points it elsewhere in tests
@@ -56,9 +62,11 @@ app/web/                  index.html, style.css, app.js (plain JavaScript, no li
 app/native.py, window.py  folder chooser and file manager; opening the window
 app/cli.py                commands: gui, projects, new, add, status, env, data, clean, sample, years, run, shortcut (-p NAME), --version
 steps/01_clean_data.py    the cleaning (text hygiene, documented Power Query steps, country fallback, checks)
-steps/common/             names.py (countries, institutions, parent organisations, country fallback), plotlook.py (plot-look wrapper); copied into <project>/common/
+steps/common/             names.py (countries, institutions, parent organisations, country fallback), plotlook.py (plot-look wrapper),
+                          table_image.py (a CSV as a PNG/SVG table picture); copied into <project>/common/
 steps/sheets/<Sheet>/     <Sheet>.py (data) and <Sheet>_plot.py (plots); a .json next to a script is copied with it
 tests/test_app.py         fast tests (standard library) + a full run of the sample project (needs pandas, numpy, matplotlib)
+docs/                     cluster-label notes are local (*.local.*); icon/make_icon.py draws the app icon
 future/                   finished code taken out of the menu (kept for later)
 ```
 
@@ -72,6 +80,9 @@ future/                   finished code taken out of the menu (kept for later)
   loop in `app/sheets.py` (choose whether it follows the project's years or draws all years by default).
 - **A new kind of step** (like the cleaning): a function in `pipeline.py`, a job in `server.py`, a page in `index.html` / `app.js`.
 - Every feature: a test in `tests/test_app.py`, an entry in `README.md`.
+- **The updater** (`app/update.py`) is tested by running real updates in throw-away clones against a local stand-in for GitHub (`FakeGitHub` in the tests;
+  `THE_DATA_APP_UPDATE_API` points the check at it). The update's own check runs the new version's quick tests with `THE_DATA_APP_UPDATING=1`, which makes
+  the update tests skip themselves (otherwise they would recurse).
 
 ## Test
 
@@ -93,6 +104,8 @@ with `--location <scratch>` (the sample project is ideal: `python3 the_data_app.
 - This folder is the repository (`main`, remote `origin`). Look at `git status` first; commit after every checked change with a message that says what and why
   (attribution lines of the session at the end); one topic per commit; never a half-working state. Push to `origin` after every change that is verified (tests pass, the new commits scanned clean): the owner asked for this on 2026-10-24; never rewrite pushed history.
 - Never commit data, tokens, personal paths, `.venv/`, `__pycache__/`, logs or `*.local.*` (see `.gitignore`). Before a push, scan the new commits for them.
-- A release: raise `__version__` in `app/__init__.py`, describe it in `README.md`, run the full tests and the fresh-clone test, commit, tag `vX.Y.Z`, push the
-  tag, and publish a **GitHub Release** for it whose body is the what's-new list: the users' update window shows that body, and `releases/latest` is what
-  every copy checks. A tag without a release is never offered. Never publish a release that has not passed the tests: copies install it on a click.
+- A release: raise `__version__` in `app/__init__.py`, add a `## Version X.Y.Z (date)` section at the top of the version notes in `README.md`, run the full
+  tests (and for larger changes the fresh-clone test), commit, tag `vX.Y.Z`, push `main` and the tag, and publish a **GitHub Release** for the tag whose body is
+  that README section: every copy checks `releases/latest`, and the update window shows that body as "What's new". A tag without a release is never offered.
+  Never publish a release that has not passed the tests: copies install it on a click. After publishing, `python3 the_data_app.py update --check-only` from a
+  copy of the previous version should offer it.
