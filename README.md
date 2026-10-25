@@ -48,7 +48,7 @@ Copies older than 0.4.0 have no updater: update them once by hand (`git pull`, o
 
 | System | How |
 |---|---|
-| macOS | double-click **`The Data Application.app`** (first time: right-click, Open; drag it to the Dock if you like) |
+| macOS | double-click **`The Data Application.app`** (first time: right-click, Open). For the Dock, Launchpad or Applications: open it once from its folder, then drag it to the Dock, make an alias in Applications (Option + Command drag), or even copy it there: a copy finds the program through the folder remembered at the last start from it |
 | Windows | double-click **`run.pyw`** (or `run.bat`); `python the_data_app.py shortcut` puts a shortcut on the desktop |
 | Linux | `python3 the_data_app.py` once; `python3 the_data_app.py shortcut` adds it to the applications menu |
 
