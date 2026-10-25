@@ -232,6 +232,11 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.6.3 (2026-10-25)
+
+- **The buttons work again after a task.** After setting up the Python environment of a new project (or any other task), "Choose the Scopus CSV..." and
+  the other buttons stayed grey until the window was reloaded. They are now enabled as soon as the task ends.
+
 ## Version 0.6.2 (2026-10-25)
 
 - **Every number in the tables has at most 2 decimal places** (Mean Citations per Document and per Year, TC per year, m index, MCP ratio, the

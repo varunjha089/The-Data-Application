@@ -162,6 +162,16 @@ class OldPython(unittest.TestCase):
         self.assertEqual(bad, [])
 
 
+class Window(unittest.TestCase):
+    def test_buttons_work_again_after_a_task(self):
+        """a task greys out the buttons (setBusy(true)); when it ends they must work again, or "Choose the Scopus CSV" stays grey after the venv setup"""
+        js = (ROOT / "app" / "web" / "app.js").read_text(encoding="utf-8")
+        polling = js[js.index("function startPolling"):]
+        polling = polling[:polling.index("\n}\n")]
+        self.assertIn("setBusy(true)", polling)
+        self.assertIn("setBusy(false)", polling[polling.index('j.state !== "running"'):])
+
+
 class FakeGitHub:
     """a local stand-in for GitHub's 'latest release' API (and the release ZIP)"""
 

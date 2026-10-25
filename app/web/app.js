@@ -459,6 +459,7 @@ function startPolling(msgId) {
     $("job-pill").textContent = "running " + j.seconds + " s";
     if (j.state !== "running") {
       clearInterval(polling); polling = null;
+      setBusy(false);                                              // the buttons work again (Choose the Scopus CSV after setting up the venv)
       const ok = j.state === "done";
       pill("job-pill", ok ? "finished" : "stopped", ok ? "ok" : "bad");
       setMsg(msgId, j.message, ok ? "ok" : "bad");
