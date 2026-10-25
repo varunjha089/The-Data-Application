@@ -224,6 +224,11 @@ def _run_script(project, name, script, args, title, log, log_name, section, pref
     return ok, "Done." if ok else f"The script stopped: {reason} The full details are in the log."
 
 
+def _fresh_picture(csv_path):
+    pic = csv_path.with_name(csv_path.stem + "_table.png")
+    return pic.exists() and pic.stat().st_mtime >= csv_path.stat().st_mtime - 5
+
+
 def make_table_pictures(project, name, log):
     """a PNG and an SVG of every table of the sheet (steps/common/table_image.py, run with the project's python); skipped, never fatal,
     when matplotlib is not installed yet. The rows drawn are a project setting (look.table_rows)."""
@@ -281,6 +286,11 @@ def run_plot(project, name, plot_id, log):
     prefix = [project.dir / "common" / "plotlook.py"] + wrap if wrap else []
     ok, msg = _run_script(project, name, f"{name}_plot.py", (["--only", plot_id] if spec.get("per_plot") else []) + sheetlist.option_args(project, name, plot=True),
                           f"plot of sheet {name}", log, f"{name}_plot_log.txt", f"plots/{plot_id if spec.get('per_plot') else 'all'}", prefix)
+    if ok:
+        stale = [c for c in spec["csvs"] if c.endswith(".csv") and sheet_csv(project, name, c).exists()
+                 and not _fresh_picture(sheet_csv(project, name, c))]
+        if stale:                                      # the data was made before table pictures existed (or by hand): draw them now
+            make_table_pictures(project, name, log)
     return (ok, f"{spec['title']}: plot generated." if ok else msg)
 
 

@@ -371,11 +371,16 @@ function renderSheet(name) {
     (pl.files.every((f) => f.exists) ? "Generate the plot again: " : "Generate plot: ") + esc(pl.title) + "</button>").join(" ");
   document.querySelectorAll("#sh-plot-buttons [data-plot]").forEach((b) => b.onclick = () => runJob("/api/sheet/plot", { name, plot: b.dataset.plot }, "sh-msg"));
   const stamp = "?v=" + Date.now();
-  $("sh-plots-title").classList.toggle("hidden", !s.plots.some((pl) => pl.files.some((f) => f.exists)));
+  const tables = s.csvs.filter((c) => c.exists && c.picture);             // the table pictures are shown with the plots
+  $("sh-plots-title").classList.toggle("hidden", !s.plots.some((pl) => pl.files.some((f) => f.exists)) && !tables.length);
+  $("sh-plots-title").textContent = s.plots.length ? "Plots and tables" : "Tables";
   $("sh-plots").innerHTML = '<div class="plots">' + s.plots.map((pl) => pl.files.filter((f) => f.exists).map((f) =>
     '<div class="plot"><img src="/files/' + esc(name) + "/" + esc(f.name) + ".png" + stamp + '" alt="' + esc(pl.title) + '"><div class="caption">' + esc(pl.title) +
     ' &nbsp; <a href="/files/' + esc(name) + "/" + esc(f.name) + '.png?download=1">PNG</a><a href="/files/' + esc(name) + "/" + esc(f.name) + '.svg?download=1">SVG</a>' +
-    (f.extra || []).map((x) => '<a href="/files/' + esc(name) + "/" + esc(f.name) + "." + x + '?download=1">' + (x === "tif" ? "TIFF" : x.toUpperCase()) + "</a>").join("") + "</div></div>").join("")).join("") + "</div>";
+    (f.extra || []).map((x) => '<a href="/files/' + esc(name) + "/" + esc(f.name) + "." + x + '?download=1">' + (x === "tif" ? "TIFF" : x.toUpperCase()) + "</a>").join("") + "</div></div>").join("")).join("") +
+    tables.map((c) => { const t = c.file.replace(/\.csv$/, "") + "_table";
+      return '<div class="plot"><img src="/files/' + esc(name) + "/" + esc(t) + ".png" + stamp + '" alt="Table ' + esc(c.file) + '"><div class="caption">Table: ' + esc(c.file.replace(/\.csv$/, "")) +
+        ' &nbsp; <a href="/files/' + esc(name) + "/" + esc(t) + '.png?download=1">PNG</a><a href="/files/' + esc(name) + "/" + esc(t) + '.svg?download=1">SVG</a></div></div>'; }).join("") + "</div>";
   $("sh-explain").classList.toggle("hidden", !s.explain);
   $("sh-explain").innerHTML = s.explain || "";
   const first = s.csvs[0];

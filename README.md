@@ -222,6 +222,12 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`).
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.5.1 (2026-10-25)
+
+- **The table picture is shown on the sheet page**, under *Plots and tables*, next to the plots, with its PNG / SVG links.
+- **Generating a plot also draws the table pictures** when they are missing or older than the data (a project whose data was made before 0.5.0
+  only needed its plot redrawn, and got no table picture).
+
 ## Version 0.5.0 (2026-10-25)
 
 - **Every table also as a picture.** When a sheet's data is generated, each of its tables is saved as `<table>_table.png` and `<table>_table.svg` next to
