@@ -13,6 +13,7 @@ file agree. Two general steps come first and a list of checks runs at the end.
   2. count the references of each paper (Reference Count), then drop the long References column
   3. remove records with no authors
   4. remove duplicate papers: same Title Key (title in lower case, letters and digits only); keep the earliest year, then the most cited
+  4b. remove duplicate papers with the same DOI (in any letter case), in the same order: the same paper indexed twice under two titles
   5. keywords: lower case, "-" and "_" become spaces, then trimmed
   6. affiliations / correspondence address: "& amp;" -> "&", Türkiye -> Turkey, Viet Nam -> Vietnam, "UPMC Univ. Paris 06;" -> "UPMC Univ. Paris 06, France;"
   7. Countries (distinct country of each affiliation, in order), Country Count, Collaboration Type (SCP = 1 country, MCP = 2 or more).
@@ -141,6 +142,12 @@ def clean(src, out):
     d = d.sort_values(["Year"] + (["Cited by"] if has("Cited by") else []), ascending=[True, False][: 2 if has("Cited by") else 1], kind="stable").drop_duplicates("Title Key")
     step("4. duplicate papers (same title) removed", d)
     d = d.drop(columns=["Title Key"]).reset_index(drop=True)
+
+    # 4b. duplicate papers (same DOI, e.g. a conference paper indexed twice, once with "... Demonstration Track" added to its title); same order as in 4
+    if has("DOI"):
+        doi = d["DOI"].str.strip().str.lower()
+        d = d[doi.isna() | ~doi.duplicated()].reset_index(drop=True)
+        step("4b. duplicate papers (same DOI) removed", d)
 
     # 5. keywords
     for c in ["Author Keywords", "Index Keywords"]:

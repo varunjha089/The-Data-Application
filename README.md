@@ -123,6 +123,7 @@ Papers without a source title are left out of the source sheets.
 | 2 | count the references of each paper, drop the long References column |
 | 3 | remove records with no authors |
 | 4 | remove duplicate papers (same title, ignoring case and punctuation; the earliest year and the most cited one is kept) |
+| 4b | remove duplicate papers with the same DOI (the same paper indexed twice under two titles), kept in the same order |
 | 5 | keywords in lower case, `-` and `_` become spaces |
 | 6 | affiliations: `& amp;` to `&`, Türkiye to Turkey, Viet Nam to Vietnam, one fix for "UPMC Univ. Paris 06" |
 | 7 | **Countries** of each paper (distinct, in order), Country Count, Collaboration Type (SCP = one country, MCP = two or more) |
@@ -231,6 +232,12 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   `topic_slices.json` in the project folder (written with automatic choices on the first run; format at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`;
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
+
+## Version 0.6.4 (2026-10-25)
+
+- **The cleaning no longer stops at "no DOI appears twice"** when Scopus lists one paper twice under two titles (for example a conference paper once
+  with "... Demonstration Track" added to its title). New step 4b removes papers whose DOI was already seen, keeping the earliest year and then the most
+  cited one, as step 4 does for titles. Exports without such pairs are cleaned exactly as before.
 
 ## Version 0.6.3 (2026-10-25)
 

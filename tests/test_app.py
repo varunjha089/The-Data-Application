@@ -348,6 +348,25 @@ class Server(unittest.TestCase):
 class FullRun(unittest.TestCase):
     """the sample project from the export to every plot, with the Python that runs the tests as the project's Python"""
 
+    def test_same_doi_twice(self):
+        """one paper indexed twice under two titles (same DOI): the cleaning keeps the first, instead of stopping at the check "no DOI appears twice\""""
+        rows = sample.make_rows()
+        first = next(r for r in rows if r.get("DOI"))
+        rows.append(dict(first, EID="2-s2.0-99999999999", Title=first["Title"] + " Demonstration Track", DOI=first["DOI"].upper(), **{"Cited by": "0"}))
+        src, out = TMP / "doi_twice" / "export.csv", TMP / "doi_twice" / "clean.csv"
+        src.parent.mkdir(parents=True, exist_ok=True)
+        with open(src, "w", newline="", encoding="utf-8-sig") as f:
+            w = csv.DictWriter(f, fieldnames=sample.COLUMNS)
+            w.writeheader()
+            w.writerows(rows)
+        r = subprocess.run([sys.executable, str(ROOT / "steps" / "01_clean_data.py"), "--input", str(src), "--output", str(out)], capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout[-2000:] + r.stderr[-2000:])
+        self.assertIn("4b. duplicate papers (same DOI) removed", r.stdout)
+        with open(out, encoding="utf-8-sig") as f:
+            eids = [row["EID"] for row in csv.DictReader(f)]
+        self.assertIn(first["EID"], eids)
+        self.assertNotIn("2-s2.0-99999999999", eids)
+
     def test_everything(self):
         pr, err = sample.create_sample_project(str(TMP / "projects"))
         self.assertIsNotNone(pr, err)
