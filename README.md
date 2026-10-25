@@ -261,7 +261,7 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   and the company form at the end (Inc., Ltd, B.V., ...) is dropped; the table lists the names merged into each publisher. A source belongs to the
   publisher named most often on its papers. The plot draws one treemap per publisher with the most documents (choose how many, and how many sources
   each shows; the rest form "Other sources"): every source is a rectangle sized by its documents, labelled with its documents and its share of the
-  publisher. A name that does not fit is replaced by the source's abbreviation. Papers without a source title are not drawn; their number is given.
+  publisher. A name that does not fit is replaced by the source's abbreviation. Papers without a source title are not drawn; their number is printed in the plot's log.
 - **Subject areas**: documents by Scopus subject area, as in Scopus's "Documents by subject area" chart. Scopus classifies sources, not papers, and the CSV
   export has no subject area, so the sheet looks each paper's source up in the **Scopus Source List**, the Excel file Elsevier publishes free of charge
   ([Scopus content page](https://www.elsevier.com/products/scopus/content/content-policy-and-selection), "the Scopus Source List"). Choose it once on the
@@ -281,6 +281,11 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   `topic_slices.json` in the project folder (written with automatic choices on the first run; format at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`;
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
+
+## Version 0.9.2 (2026-10-25)
+
+- **Publisher treemaps:** the panel titles are one line again; the number of papers without a source title (not drawn) is printed in the
+  plot's log instead of under each title.
 
 ## Version 0.9.1 (2026-10-25)
 

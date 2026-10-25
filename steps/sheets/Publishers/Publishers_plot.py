@@ -2,7 +2,7 @@
 Inside a publisher's panel every source is a rectangle whose area is its number of documents; the label gives the source, its documents and its share of the
 publisher's documents (%). The largest source has the panel's own colour; the others are coloured by size: 10 % or more of the publisher, 2 or more documents,
 1 document (grey). Sources beyond --tiles are put together in one rectangle "Other sources". Papers without a Source title (books, some
-proceedings) are not a source, so they are not drawn (as in Bradford's law); their number is given under the panel's title. A name that does not fit is replaced by the source's
+proceedings) are not a source, so they are not drawn (as in Bradford's law); their number is printed in the log (and they are in the table as "(no source title)"). A name that does not fit is replaced by the source's
 abbreviation (Abbreviated Source Title), then by its numbers only; the labels are drawn as outlines sized to their rectangle, so they never spill over.
 Layout: the squarified treemap of Bruls, Huizing and van Wijk (2000): rectangles as close to squares as possible, the largest at the top left.
 Input : Publishers.csv and Publishers_sources.csv in this folder (run Publishers.py first)        Output: publisher_treemaps (.png and .svg, same folder)
@@ -142,8 +142,9 @@ for i, (ax, p) in enumerate(zip(axes.flat, pub.itertuples(index=False))):
     ax.set_ylim(0, H)
     ax.set_aspect("equal")
     ax.axis("off")
-    note = f"\n({loose:,} {'document' if loose == 1 else 'documents'} without a source title not drawn)" if loose else ""
-    ax.set_title(f"({chr(97 + i)}) {p.Publisher}: {total:,} documents in {len(s)} sources{note}", fontsize=12, fontfamily="DejaVu Serif")
+    if loose:
+        print(f"{p.Publisher}: {loose:,} {'document' if loose == 1 else 'documents'} without a source title, not drawn")
+    ax.set_title(f"({chr(97 + i)}) {p.Publisher}: {total:,} documents in {len(s)} sources", fontsize=12, fontfamily="DejaVu Serif")
 for ax in list(axes.flat)[k:]:
     ax.axis("off")
 fig.suptitle("Sources of the publishers with the most documents (area = documents; % = share of the publisher)", fontweight="bold", fontsize=14)
