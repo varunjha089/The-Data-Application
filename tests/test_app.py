@@ -348,6 +348,27 @@ class Server(unittest.TestCase):
 class FullRun(unittest.TestCase):
     """the sample project from the export to every plot, with the Python that runs the tests as the project's Python"""
 
+    def test_word_cloud_merges_variants(self):
+        """plurals and abbreviations in brackets are one keyword; a paper counts once; an abbreviation that starts with another letter is not taken"""
+        folder = TMP / "word_cloud"
+        (folder / "01_Clean_Data").mkdir(parents=True, exist_ok=True)
+        (folder / "Word_Cloud").mkdir(exist_ok=True)
+        rows = [("1", "retrieval augmented generation (rag); rag"), ("2", "rag; knowledge graphs"), ("3", "retrieval augmented generation; knowledge graph"),
+                ("4", "large language models (llms); llm"), ("5", "large language model; python (snake)"), ("6", "analysis")]
+        with open(folder / "01_Clean_Data" / "clean_main_data.csv", "w", newline="", encoding="utf-8-sig") as f:
+            w = csv.writer(f)
+            w.writerow(["EID", "Author Keywords"])
+            w.writerows([("2-s2.0-" + e, k) for e, k in rows])
+        for name in ("Word_Cloud.py", "Word_Cloud_plot.py"):
+            shutil.copy(ROOT / "steps" / "sheets" / "Word_Cloud" / name, folder / "Word_Cloud" / name)
+        for script, extra in (("Word_Cloud.py", []), ("Word_Cloud_plot.py", ["--leave-out", "1"])):
+            r = subprocess.run([sys.executable, script] + extra, cwd=folder / "Word_Cloud", capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stdout[-2000:] + r.stderr[-2000:])
+        with open(folder / "Word_Cloud" / "Word_Cloud.csv", encoding="utf-8-sig") as f:
+            got = {row["Keyword"]: int(row["Papers"]) for row in csv.DictReader(f)}
+        self.assertEqual(got, {"retrieval augmented generation": 3, "knowledge graph": 2, "large language model": 2, "python (snake)": 1, "analysis": 1})
+        self.assertTrue((folder / "Word_Cloud" / "word_cloud.png").exists())
+
     def test_same_doi_twice(self):
         """one paper indexed twice under two titles (same DOI): the cleaning keeps the first, instead of stopping at the check "no DOI appears twice\""""
         rows = sample.make_rows()

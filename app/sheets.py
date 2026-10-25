@@ -68,6 +68,8 @@ _ROWS = [
      [("top_country_pairs", "Country collaboration: pairs with most joint papers", ["top_country_pairs"]), ("chord_diagram", "Country collaboration: chord diagram", ["chord_diagram"])]),
     ("Topic_Slices", "Documents", "Topic slices and gap audit", "The papers cut by search (Query_IDs): what each slice looks like, what it cites, term trends, and, if you define it, a gap audit for papers that combine topics. Needs the columns Query_IDs and N_Queries (merged search exports) and a References export. What to cut and look for is set in topic_slices.json in the project folder (written on the first run; edit it).", ["Countries", "References"],
      []),
+    ("Word_Cloud", "Documents", "Word cloud of the keywords", "How many papers use each keyword, drawn as a word cloud (a word's size follows its number of papers). Spelling variants are merged: plurals, and abbreviations in brackets with their full name (\"rag\" and \"retrieval augmented generation (rag)\" count as \"retrieval augmented generation\"); the table lists what was merged. Leave out the words of your search below: they are in nearly every paper and would fill the picture.", [],
+     [("word_cloud", "Word cloud of the keywords", ["word_cloud"])]),
     ("23_Top_Cited", "Documents", "Most cited documents", "The 20 most cited documents.", [], [("top_cited", "Most cited documents", ["top_cited"])]),
 ]
 # options the user is asked for (saved in the project; the sheet's data script gets them as arguments): id, label, kind, default, limits, argument
@@ -118,6 +120,13 @@ _OPTIONS["05_Life_Cycle"].insert(0, {"id": "fit_to", "label": f"Last year used t
                                      "kind": "number", "default": 0, "min": 0, "max": 2100, "arg": "--fit-to-year"})
 _OPTIONS["Subject_Areas"] = [{"id": "top_areas", "label": "Number of subject areas with their own slice and bar (the others are grouped as \"Other\" in the pie)", "kind": "number",
                               "default": 10, "min": 3, "max": 27, "arg": "--top", "for": "plot"}]
+_OPTIONS["Word_Cloud"] = [
+    {"id": "field", "label": "Keywords", "kind": "select", "choices": [("author", "Author Keywords (chosen by the authors)"), ("index", "Index Keywords (added by Scopus)"),
+     ("both", "Both (a keyword in both lists counts once per paper)")], "default": "author", "arg": "--field"},
+    {"id": "merge", "label": "Merge spelling variants (plurals, abbreviations in brackets)", "kind": "check", "default": True, "arg": "--merge", "arg_off": "--no-merge"},
+    {"id": "words", "label": "Number of keywords in the word cloud", "kind": "number", "default": 150, "min": 10, "max": 400, "arg": "--words", "for": "plot"},
+    {"id": "leave_out", "label": "Leave out the most used keywords (e.g. the words of your search): how many", "kind": "number", "default": 0, "min": 0, "max": 20,
+     "arg": "--leave-out", "for": "plot"}]
 _OPTIONS["17_Top_Affiliations"] = [{"id": "by", "label": "Count papers by", "kind": "select", "choices": [("institution", "Institution (each institute on its own)"),
                                     ("parent", "Parent organisation (e.g. the institutes of the Chinese Academy of Sciences together)")], "default": "institution", "arg": "--by"}]
 

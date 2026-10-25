@@ -101,7 +101,7 @@ Choosing a new file makes the earlier cleaned data "out of date" until you clean
 | Authors | Authors over time (plot), Lotka's law (plot), Author impact (plot) |
 | Affiliations | Top affiliations (plot), Affiliations over time (plot) |
 | Countries | Corresponding authors' countries (plot), Countries' production and citations (2 plots), Country collaboration pairs (plot), Country collaboration chord (chord diagram) |
-| Documents | Most cited documents (plot) |
+| Documents | Word cloud of the keywords (plot), Most cited documents (plot) |
 
 Each sheet is one Python file (`steps/sheets/<Sheet>/<Sheet>.py`) and each plot one more (`<Sheet>_plot.py`); the application copies the script into the project's folder `<Sheet>/` and runs it there with the project's Python,
 so the folder of a project also holds the scripts and results of every sheet. The scripts are readable on their own: a header says what the sheet is, the Excel method it follows, its input and its output.
@@ -213,6 +213,11 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   script as arguments (how many authors, countries, sources or institutions; keep ties; burst settings; years). A plot of a sheet with data options makes its data again first.
 - **Timelines** (bubbles) for sources, authors, institutions and countries, with a "top n" choice; **Source impact** has eight plots to choose from (bars, two pyramids,
   bubbles, dumbbell, heat map, citations per paper, m-index against first year); **Country radar** (five indicators); **Languages**, **Document types** and **Open access** pies.
+- **Word cloud** of the keywords (Author Keywords, Index Keywords or both): a word's size follows the number of papers that use it; blue, violet, green,
+  pink, red, teal and indigo (no yellow or orange). Spelling variants are merged using only what the data shows: plurals ("llms" and "llm") and an
+  abbreviation in brackets with its full name ("retrieval augmented generation (rag)" also makes "rag" count as "retrieval augmented generation"); the table's
+  column Variants lists what was merged (switch it off on the page). Choose how many keywords are drawn, and leave out the most used ones (the words of
+  your search, which are in nearly every paper); they stay in the table and are named under the picture. Drawn without any extra package.
 - **Subject areas**: documents by Scopus subject area, as in Scopus's "Documents by subject area" chart. Scopus classifies sources, not papers, and the CSV
   export has no subject area, so the sheet looks each paper's source up in the **Scopus Source List**, the Excel file Elsevier publishes free of charge
   ([Scopus content page](https://www.elsevier.com/products/scopus/content/content-policy-and-selection), "the Scopus Source List"). Choose it once on the
@@ -232,6 +237,13 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   `topic_slices.json` in the project folder (written with automatic choices on the first run; format at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`;
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
+
+## Version 0.7.0 (2026-10-25)
+
+- **New sheet: Word cloud of the keywords** (group Documents). Choose Author Keywords, Index Keywords or both, how many words are drawn, and how many of
+  the most used keywords to leave out (your search terms). Plurals and abbreviations in brackets are merged into one keyword ("rag", "retrieval augmented
+  generation (rag)" and "retrieval augmented generation" are one); the table lists the variants. Colours: blue, violet, green, pink, red, teal, indigo.
+  A less used keyword is never drawn larger than a more used one. No new package is needed.
 
 ## Version 0.6.4 (2026-10-25)
 
