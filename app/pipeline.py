@@ -224,6 +224,23 @@ def _run_script(project, name, script, args, title, log, log_name, section, pref
     return ok, "Done." if ok else f"The script stopped: {reason} The full details are in the log."
 
 
+def make_table_pictures(project, name, log):
+    """a PNG and an SVG of every table of the sheet (steps/common/table_image.py, run with the project's python); skipped, never fatal,
+    when matplotlib is not installed yet. The rows drawn are a project setting (look.table_rows)."""
+    py = project.python()
+    if py is None or "matplotlib" in envsetup.missing_packages(py):
+        log("(table pictures skipped: the package matplotlib is not installed yet; Settings, Install the missing packages)")
+        return
+    spec = sheetlist.get(name)
+    rows = str(look.get(project)["table_rows"])
+    for c in spec["csvs"]:
+        path = sheet_csv(project, name, c)
+        if not path.exists() or not c.endswith(".csv"):
+            continue
+        title = spec["title"] if c == spec["csvs"][0] else spec["title"] + ": " + c[:-4].split("_", 1)[-1].replace("_", " ")
+        stream([py, project.dir / "common" / "table_image.py", path.name, "--rows", rows, "--title", title], log, echo=False, cwd=path.parent)
+
+
 def run_sheet(project, name, log, _chain=()):
     """Generate the data of one sheet. A needed sheet that has not been generated yet is generated first. Returns (ok, message)."""
     spec = sheetlist.get(name)
@@ -245,6 +262,8 @@ def run_sheet(project, name, log, _chain=()):
         args = ["--raw", raw]
     log(f"=== {name}")
     ok, msg = _run_script(project, name, f"{name}.py", args, f"sheet {name}", log, f"{name}_log.txt", "data")
+    if ok:
+        make_table_pictures(project, name, log)
     return (ok, f"{spec['title']}: data generated." if ok else msg)
 
 

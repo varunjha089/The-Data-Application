@@ -140,6 +140,10 @@
           <label><input type="checkbox" id="look-pdf"> also save a PDF</label>
           <label><input type="checkbox" id="look-tiff"> also save a TIFF (for journals)</label>
         </div>
+        <div class="row">
+          <label>Rows in table pictures <select id="look-rows" aria-label="Rows in table pictures"></select></label>
+          <span class="info">Every table is also saved as a PNG and an SVG picture when its data is generated (the CSV always has every row).</span>
+        </div>
         <div id="look-msg" class="msg"></div>
       </section>
 
@@ -208,6 +212,7 @@
         <div id="sh-data" class="hidden">
           <h3>Data <span id="sh-total"></span></h3>
           <div class="row" id="sh-csvs"></div>
+          <div class="row" id="sh-tablepic"></div>
           <div class="table-wrap"><table id="sh-table"></table></div>
           <div class="row" id="sh-pager"></div>
         </div>

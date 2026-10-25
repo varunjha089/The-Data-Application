@@ -71,7 +71,7 @@ class App:
         clean = {"exists": pr.clean_file.exists(), "current": bool(made) and pr.clean_file.exists() and made.get("exclude", "") == wanted and made.get("country_fallback", False) == fallback,
                  "made": made.get("made"), "log": pr.clean_log.exists(), "exclude_only_queries": wanted, "country_fallback": fallback}
         out["project"] = {"path": str(pr.dir), "name": pr.name, "dir": str(pr.dir), "created": cfg.get("created", ""), "env": env, "data": data, "clean": clean,
-                          "years": years.info(pr), "look": look.get(pr), "look_choices": {"dpi": list(look.DPI), "palettes": look.PALETTES, "limits": look.LIMITS},
+                          "years": years.info(pr), "look": look.get(pr), "look_choices": {"dpi": list(look.DPI), "palettes": look.PALETTES, "limits": look.LIMITS, "table_rows": list(look.TABLE_ROWS)},
                           "steps": sorted(p.name for p in STEPS.glob("*.py"))}
         return out
 
@@ -150,7 +150,9 @@ class App:
             csvs = []
             for c in spec["csvs"]:
                 p = pipeline.sheet_csv(pr, spec["name"], c)
-                csvs.append({"file": c, "exists": p.exists(), "rows": self.csv_rows(p) if p.exists() else 0})
+                pic = p.with_name(p.stem + "_table.png")
+                csvs.append({"file": c, "exists": p.exists(), "rows": self.csv_rows(p) if p.exists() else 0,
+                             "picture": pic.exists() and p.exists() and pic.stat().st_mtime >= p.stat().st_mtime - 5})
             plots = [{"id": p["id"], "title": p["title"], "files": [self.plot_file(pr, spec["name"], f) for f in p["files"]]} for p in spec["plots"]]
             out.append({**{k: spec[k] for k in ("name", "group", "title", "what", "needs")}, **st, "csvs": csvs, "plots": plots,
                         "log": (pr.dir / spec["name"] / f"{spec['name']}_log.txt").exists(),

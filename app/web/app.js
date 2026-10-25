@@ -221,14 +221,15 @@ function renderLook() {
   fill("look-dpi", ch.dpi.map((v) => [v, v ? v + " dpi" : "as each plot chooses (150 dpi)"]), lk.dpi);
   fill("look-palette", Object.entries(ch.palettes), lk.palette);
   $("look-pdf").checked = lk.pdf; $("look-tiff").checked = lk.tiff;
+  fill("look-rows", (ch.table_rows || [20, 50, 100, 0]).map((v) => [v, v ? "first " + v : "all (up to 1000)"]), lk.table_rows);
   const changed = lk.text !== 1 || lk.size !== 1 || lk.dpi || lk.pdf || lk.tiff || lk.palette !== "standard";
   pill("look-pill", changed ? "changed" : "standard", changed ? "warn" : "ok");
 }
-for (const id of ["look-text", "look-size", "look-dpi", "look-palette", "look-pdf", "look-tiff"]) $(id).onchange = async () => {
-  const values = { text: Number($("look-text").value), size: Number($("look-size").value), dpi: Number($("look-dpi").value), palette: $("look-palette").value, pdf: $("look-pdf").checked, tiff: $("look-tiff").checked };
+for (const id of ["look-text", "look-size", "look-dpi", "look-palette", "look-pdf", "look-tiff", "look-rows"]) $(id).onchange = async () => {
+  const values = { text: Number($("look-text").value), size: Number($("look-size").value), dpi: Number($("look-dpi").value), palette: $("look-palette").value, pdf: $("look-pdf").checked, tiff: $("look-tiff").checked, table_rows: Number($("look-rows").value) };
   const r = await api("/api/look", { values });
   state.project.look = r.look; renderLook();
-  setMsg("look-msg", "Saved. Generate the plots again to see it.", "ok");
+  setMsg("look-msg", id === "look-rows" ? "Saved. Generate the data again to redraw the table pictures." : "Saved. Generate the plots again to see it.", "ok");
 };
 function envMode() { return document.querySelector("input[name=env]:checked").value; }
 document.querySelectorAll("input[name=env]").forEach((r) => r.onchange = () => {
@@ -398,6 +399,8 @@ function renderSheet(name) {
 async function loadTable(name) {
   const t = await api("/api/sheet/table?name=" + encodeURIComponent(name) + "&csv=" + encodeURIComponent(curCsv) + "&page=" + curPage + "&size=50");
   document.querySelectorAll("#sh-csvs .tabbtn").forEach((b) => b.classList.toggle("active", b.dataset.csv === curCsv));
+  const c = ((spec(name) || {}).csvs || []).find((x) => x.file === curCsv), stem = curCsv.replace(/\.csv$/, "") + "_table";
+  $("sh-tablepic").innerHTML = c && c.picture ? 'Download the table as a picture: <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.png?download=1">PNG</a> <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.svg?download=1">SVG</a>' : "";
   if (!t.exists) { $("sh-table").innerHTML = ""; return; }
   $("sh-total").textContent = "(" + t.total + " rows, " + t.columns.length + " columns)";
   $("sh-table").innerHTML = "<thead><tr>" + t.columns.map((x) => "<th>" + esc(x) + "</th>").join("") + "</tr></thead><tbody>" +

@@ -222,6 +222,13 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`).
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.5.0 (2026-10-25)
+
+- **Every table also as a picture.** When a sheet's data is generated, each of its tables is saved as `<table>_table.png` and `<table>_table.svg` next to
+  the CSV (the SVG keeps the text editable), and the sheet page offers *Download the table as a picture: PNG / SVG* under the table. The plots are unchanged.
+  A long table is drawn with its first 50 rows and says so in its title ("first 50 of 928 rows"); choose 20, 50, 100 or all (up to 1,000) in Settings,
+  *Look of the plots*. Cells are shown exactly as in the CSV. Drawn by `steps/common/table_image.py`, which can also be run by hand on any CSV.
+
 ## Version 0.4.1 (2026-10-25)
 
 - **Fix: the cleaning stopped with `IndexError`** on exports where a correspondence address is empty (`; ; ;`): the country fill-in of 0.3.0 asked for

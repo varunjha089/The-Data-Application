@@ -347,6 +347,9 @@ class FullRun(unittest.TestCase):
             if not (folder / "run_info.json").exists():
                 missing.append(f"{spec['name']}/run_info.json")
         self.assertEqual(missing, [])
+        for sheet, csv_name in (("03_Annual_Production", "03_Annual_Production"), ("09_Pivot", "09_Pivot"), ("Bradford_Core", "Bradford_Core_baseline")):
+            for ext in ("png", "svg"):                          # every table also as a picture (first look.table_rows rows)
+                self.assertTrue((pr.dir / sheet / f"{csv_name}_table.{ext}").exists(), f"{sheet}/{csv_name}_table.{ext}")
         with open(pr.dir / "05_Life_Cycle" / "05_Life_Cycle.csv", encoding="utf-8-sig") as f:
             fit = {int(r["Year"]): r["In Fit"] for r in csv.DictReader(f)}
         this = date.today().year

@@ -2,7 +2,8 @@
 Saved in project.json as "plot_look". With the defaults the plot scripts run as they are; otherwise the application runs them through
 steps/common/plotlook.py, which changes only the look (never the data) and is copied into the project so the command in the log can be run again."""
 
-DEFAULT = {"text": 1.0, "size": 1.0, "dpi": 0, "pdf": False, "tiff": False, "palette": "standard"}
+DEFAULT = {"text": 1.0, "size": 1.0, "dpi": 0, "pdf": False, "tiff": False, "palette": "standard", "table_rows": 50}
+TABLE_ROWS = (20, 50, 100, 0)              # rows drawn in a table picture (0 = all, at most 1000)
 LIMITS = {"text": (0.6, 2.5), "size": (0.6, 2.5)}
 DPI = (0, 150, 300, 600)                       # 0 = as the script chooses (150, the Bradford plot 300)
 PALETTES = {"standard": "Standard colours", "colourblind": "Colour-blind safe (Okabe-Ito)"}
@@ -23,6 +24,10 @@ def get(project):
         pass
     out["pdf"], out["tiff"] = bool(saved.get("pdf")), bool(saved.get("tiff"))
     out["palette"] = saved.get("palette") if saved.get("palette") in PALETTES else "standard"
+    try:
+        out["table_rows"] = int(saved.get("table_rows", 50)) if int(saved.get("table_rows", 50)) in TABLE_ROWS else 50
+    except (TypeError, ValueError):
+        pass
     return out
 
 
