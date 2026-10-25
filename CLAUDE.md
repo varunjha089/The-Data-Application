@@ -48,6 +48,8 @@ app/sheets.py             registry of the sheets: group, title, description, nee
 app/years.py              the project's years in the plots: presets last10 / last5 / all / custom, resolved once and SAVED; roll_forward
 app/look.py               the project's plot look -> arguments of steps/common/plotlook.py
 app/sample.py             made-up Scopus export and the "Sample project" (window button, `sample` command, tests)
+app/update.py             self-update like a desktop program: daily check of GitHub's latest release, install (git fast-forward or release ZIP + backup),
+                          the new version's quick tests, rollback, restart; THE_DATA_APP_UPDATE_API points it elsewhere in tests
 app/jobs.py               one background job at a time with a pollable log; stream() runs a command
 app/server.py             the window's server: 127.0.0.1, key cookie, Host/Origin check, the /api routes
 app/web/                  index.html, style.css, app.js (plain JavaScript, no libraries, no internet)
@@ -91,4 +93,6 @@ with `--location <scratch>` (the sample project is ideal: `python3 the_data_app.
 - This folder is the repository (`main`, remote `origin`). Look at `git status` first; commit after every checked change with a message that says what and why
   (attribution lines of the session at the end); one topic per commit; never a half-working state. Push to `origin` after every change that is verified (tests pass, the new commits scanned clean): the owner asked for this on 2026-10-24; never rewrite pushed history.
 - Never commit data, tokens, personal paths, `.venv/`, `__pycache__/`, logs or `*.local.*` (see `.gitignore`). Before a push, scan the new commits for them.
-- A release: raise `__version__` in `app/__init__.py`, describe it in `README.md`, run the full tests and the fresh-clone test, commit, tag `vX.Y.Z`.
+- A release: raise `__version__` in `app/__init__.py`, describe it in `README.md`, run the full tests and the fresh-clone test, commit, tag `vX.Y.Z`, push the
+  tag, and publish a **GitHub Release** for it whose body is the what's-new list: the users' update window shows that body, and `releases/latest` is what
+  every copy checks. A tag without a release is never offered. Never publish a release that has not passed the tests: copies install it on a click.

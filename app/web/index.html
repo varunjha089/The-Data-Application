@@ -223,7 +223,28 @@
     </section>
   </main>
 </div>
-<footer id="folder"></footer>
+<footer><span id="folder"></span>
+  <span class="update-links"> &nbsp;|&nbsp; <a href="#" id="upd-check">Check for updates</a>
+  &nbsp;<label><input type="checkbox" id="upd-auto"> check automatically</label> <span id="upd-msg" class="msg"></span></span></footer>
+
+<!-- the update window, like a desktop program's: shown when a newer release exists (app/update.py) -->
+<div id="upd-dialog" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="upd-title">
+  <div class="modal-box">
+    <h2 id="upd-title">A new version is available</h2>
+    <p id="upd-what"></p>
+    <h3>What's new</h3>
+    <pre id="upd-notes" class="notes"></pre>
+    <p class="info">Your projects and data are not touched. <span id="upd-how"></span></p>
+    <pre id="upd-log" class="hidden"></pre>
+    <div id="upd-result" class="msg"></div>
+    <div class="row">
+      <button id="upd-install" class="primary">Install and restart</button>
+      <button id="upd-later">Later</button>
+      <button id="upd-skip">Skip this version</button>
+      <a id="upd-page" href="#" target="_blank" rel="noopener">Release page</a>
+    </div>
+  </div>
+</div>
 <script src="/app.js"></script>
 </body>
 </html>

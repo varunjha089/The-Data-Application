@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from . import __version__, config, dataset, envsetup, pipeline, sample, years
+from . import __version__, config, dataset, envsetup, pipeline, sample, update, years
 from . import project as projects
 from .paths import ROOT, STEPS
 
@@ -160,6 +160,23 @@ def cmd_run(pr, plots):
     return 0 if ok else 1
 
 
+def cmd_update(check_only):
+    st = update.check(force=True)
+    if st.get("error"):
+        print(st["error"])
+        return 1
+    if not st["available"]:
+        print(f"The Data Application {st['current']} is the latest version.")
+        return 0
+    lt = st["latest"]
+    print(f"Version {lt['version']} is available (you have {st['current']}), published {lt['published']}: {lt['url']}\n\n{lt['notes']}\n")
+    if check_only:
+        return 0
+    ok, msg = update.install(print)
+    print("\n" + msg.replace(" The application restarts now.", " Start the application again to use it."))
+    return 0 if ok else 1
+
+
 def make_shortcut():
     """a shortcut with absolute paths (paths with spaces are fine): Linux applications menu, Windows desktop; macOS has the .app"""
     py, script = sys.executable, ROOT / "the_data_app.py"
@@ -223,6 +240,8 @@ def main(argv=None):
     y.add_argument("--roll-forward", action="store_true", help="work the preset out again for today")
     r = with_project(sub.add_parser("run", help="generate the data of every sheet (or, with --plots, every plot)"))
     r.add_argument("--plots", action="store_true")
+    u = sub.add_parser("update", help="check GitHub for a newer version and install it (projects and data are never touched)")
+    u.add_argument("--check-only", action="store_true", help="only say whether a newer version exists")
     sub.add_parser("shortcut", help="make a desktop / applications-menu shortcut that opens the window (Linux, Windows)")
     a = ap.parse_args(argv)
     if a.cmd in (None, "gui"):
@@ -238,6 +257,8 @@ def main(argv=None):
         return make_shortcut()
     if a.cmd == "sample":
         return cmd_sample(a.location)
+    if a.cmd == "update":
+        return cmd_update(a.check_only)
     pr = pick_project(a.project)
     if pr is None:
         return 1

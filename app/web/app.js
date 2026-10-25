@@ -42,6 +42,7 @@ async function boot(target) {
   settings.theme = ui.theme || (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
   applyLook();
   $("folder").textContent = "The Data Application " + (state.version || "") + "  |  application folder: " + state.folder;
+  api("/api/update").then(renderUpdateFooter).catch(() => {});
   if (!state.project) { await renderWelcome(); show("welcome"); return; }
   show("workspace");
   const p = state.project, needSetup = !p.env.can_clean || !p.data.chosen || !p.data.exists;
@@ -441,4 +442,54 @@ $("quit").onclick = async () => {
   document.body.innerHTML = "<main><h2>The Data Application has stopped.</h2><p>You can close this window.</p></main>";
   setTimeout(() => window.close(), 400);
 };
+// ---------------------------------------------------------------- updates (like a desktop program: a window when a newer release exists)
+let upd = null;
+function showUpdate(u) {
+  upd = u;
+  const lt = u.latest;
+  $("upd-what").innerHTML = "<b>The Data Application " + esc(lt.version) + "</b> (you have " + esc(u.current) + ")" + (lt.published ? ", published " + esc(lt.published) : "") + ".";
+  $("upd-notes").textContent = lt.notes || "(no notes)";
+  $("upd-how").textContent = u.method === "git" ? "It is updated with git (your copy is a git clone)." : "The new files are downloaded; the current ones are backed up first.";
+  $("upd-page").href = lt.url;
+  $("upd-log").classList.add("hidden"); $("upd-log").textContent = ""; setMsg("upd-result", "");
+  for (const id of ["upd-install", "upd-later", "upd-skip"]) $(id).disabled = false;
+  $("upd-install").textContent = "Install and restart";
+  $("upd-dialog").classList.remove("hidden");
+}
+function renderUpdateFooter(u) { $("upd-auto").checked = u.enabled !== false; }
+async function checkUpdate(force) {
+  const u = force ? await api("/api/update/check", {}) : await api("/api/update");
+  renderUpdateFooter(u);
+  if (u.installed) return u;
+  if (force) {
+    if (u.error) setMsg("upd-msg", u.error, "warn");
+    else if (u.available) showUpdate(u);
+    else setMsg("upd-msg", "You have the latest version (" + u.current + ").", "ok");
+  } else if (u.show) showUpdate(u);
+  return u;
+}
+$("upd-check").onclick = (e) => { e.preventDefault(); setMsg("upd-msg", "Checking ...", ""); checkUpdate(true); };
+$("upd-auto").onchange = () => api("/api/update/settings", { enabled: $("upd-auto").checked });
+$("upd-later").onclick = () => $("upd-dialog").classList.add("hidden");
+$("upd-skip").onclick = async () => { await api("/api/update/skip", { version: upd.latest.version }); $("upd-dialog").classList.add("hidden"); };
+$("upd-install").onclick = async () => {
+  for (const id of ["upd-install", "upd-later", "upd-skip"]) $(id).disabled = true;
+  $("upd-install").textContent = "Installing ...";
+  const r = await api("/api/update/install", {});
+  if (!r.started) { setMsg("upd-result", r.message || "Another task is still running.", "warn"); $("upd-later").disabled = false; return; }
+  $("upd-log").classList.remove("hidden");
+  let from = 0;
+  const t = setInterval(async () => {
+    const j = await api("/api/job?since=" + from);
+    if (j.log.length) { $("upd-log").textContent += j.log.join("\n") + "\n"; $("upd-log").scrollTop = $("upd-log").scrollHeight; from = j.next; }
+    if (j.state === "running") return;
+    clearInterval(t);
+    if (j.state !== "done") { setMsg("upd-result", j.message, "bad"); $("upd-later").disabled = false; $("upd-install").textContent = "Not installed"; return; }
+    setMsg("upd-result", j.message + " A new window opens in a moment; this one closes.", "ok");
+    await api("/api/update/restart", {});
+    setTimeout(() => { document.body.innerHTML = "<main><h2>The Data Application was updated.</h2><p>It opens again in a new window. You can close this one.</p></main>"; window.close(); }, 2500);
+  }, 800);
+};
+setTimeout(() => checkUpdate(false).catch(() => {}), 2500);       // after the background check at start-up has had time to answer
+
 boot(location.hash.replace("#", "") || undefined);

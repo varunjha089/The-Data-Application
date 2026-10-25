@@ -11,6 +11,7 @@ import http.client
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import threading
@@ -21,11 +22,12 @@ from pathlib import Path
 TMP = Path(tempfile.mkdtemp(prefix="tda_test_"))
 os.environ["THE_DATA_APP_HOME"] = str(TMP / "appdata")          # before the application is imported: its settings go to the temporary folder
 os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+os.environ["THE_DATA_APP_UPDATE_API"] = "http://127.0.0.1:9/no-update-server"   # the tests never ask GitHub
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "steps" / "common"))
 
-from app import dataset, look, pipeline, project as projects, sample, sheets, years  # noqa: E402
+from app import dataset, look, pipeline, project as projects, sample, sheets, update, years  # noqa: E402
 import names  # noqa: E402
 
 DAY = date(2026, 10, 24)
@@ -154,6 +156,123 @@ class OldPython(unittest.TestCase):
                 if same.search(line):
                     bad.append(f"{f.relative_to(ROOT)}:{i}")
         self.assertEqual(bad, [])
+
+
+class FakeGitHub:
+    """a local stand-in for GitHub's 'latest release' API (and the release ZIP)"""
+
+    def __init__(self, tag, zip_path=None, body="- something new"):
+        import http.server
+        outer = self
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_GET(self):
+                if self.path.startswith("/zip") and zip_path:
+                    data = Path(zip_path).read_bytes()
+                    self.send_response(200); self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data)
+                    return
+                data = json.dumps({"tag_name": tag, "name": tag, "body": body, "html_url": "https://example.org/r",
+                                   "zipball_url": f"http://127.0.0.1:{outer.port}/zip", "published_at": "2026-10-25T00:00:00Z"}).encode()
+                self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers(); self.wfile.write(data)
+        self.httpd = http.server.HTTPServer(("127.0.0.1", 0), H)
+        self.port = self.httpd.server_address[1]
+        self.url = f"http://127.0.0.1:{self.port}/latest"
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+
+    def close(self):
+        self.httpd.shutdown()
+
+
+@unittest.skipIf(shutil.which("git") is None or not (ROOT / ".git").exists() or os.environ.get("THE_DATA_APP_UPDATING"),
+                 "needs git and a git checkout (and does not run inside an update's own check)")
+class Updates(unittest.TestCase):
+    """the updater, run inside throw-away copies of this repository (never on this folder)"""
+
+    def test_versions(self):
+        self.assertTrue(update.newer("v0.10.0", "0.9.9"))
+        self.assertFalse(update.newer("0.3.0", "v0.3.0"))
+        self.assertEqual(update.parse_version("v1.2.3-beta"), (1, 2, 3))
+
+    def make_release(self, root, version, broken=False):
+        """origin repo (a clone of this one, current commit) + a newer commit tagged v<version>; returns the origin path"""
+        origin = root / "origin"
+        subprocess.run(["git", "clone", "-q", str(ROOT), str(origin)], check=True)
+        cur = (ROOT / "app" / "__init__.py").read_text(encoding="utf-8")
+        import re as _re
+        (origin / "app" / "__init__.py").write_text(_re.sub(r'__version__ = "[^"]+"', f'__version__ = "{version}"', cur), encoding="utf-8")
+        if broken:
+            (origin / "tests" / "test_broken.py").write_text("import unittest\nclass T(unittest.TestCase):\n    def test(self):\n        self.fail('broken release')\n", encoding="utf-8")
+        g = ["git", "-C", str(origin), "-c", "user.name=t", "-c", "user.email=t@t"]
+        subprocess.run(g + ["add", "-A"], check=True)
+        subprocess.run(g + ["commit", "-q", "-m", f"release {version}"], check=True)
+        subprocess.run(g + ["tag", f"v{version}"], check=True)
+        return origin
+
+    def run_update(self, copy, api, home):
+        """install from inside `copy` (a separate process: ROOT is that copy); returns (exit code, output)"""
+        env = dict(os.environ, THE_DATA_APP_UPDATE_API=api, THE_DATA_APP_HOME=str(home), PYTHONDONTWRITEBYTECODE="1")
+        code = "import sys; from app import update; print(update.check(force=True)['available']); ok, msg = update.install(print); print(msg); sys.exit(0 if ok else 1)"
+        r = subprocess.run([sys.executable, "-c", code], cwd=copy, env=env, capture_output=True, text=True, timeout=900)
+        return r.returncode, r.stdout + r.stderr
+
+    def test_git_update_and_rollback(self):
+        root = Path(tempfile.mkdtemp(dir=TMP))
+        origin = self.make_release(root, "9.9.9")
+        copy = root / "copy"
+        subprocess.run(["git", "clone", "-q", str(ROOT), str(copy)], check=True)
+        subprocess.run(["git", "-C", str(copy), "remote", "set-url", "origin", str(origin)], check=True)
+        gh = FakeGitHub("v9.9.9")
+        try:
+            code, out = self.run_update(copy, gh.url, root / "home")
+        finally:
+            gh.close()
+        self.assertEqual(code, 0, out)
+        self.assertIn('"9.9.9"', (copy / "app" / "__init__.py").read_text(encoding="utf-8"))
+        # a release that fails its own tests is rolled back
+        root2 = Path(tempfile.mkdtemp(dir=TMP))
+        origin2 = self.make_release(root2, "9.9.8", broken=True)
+        copy2 = root2 / "copy"
+        subprocess.run(["git", "clone", "-q", str(ROOT), str(copy2)], check=True)
+        subprocess.run(["git", "-C", str(copy2), "remote", "set-url", "origin", str(origin2)], check=True)
+        before = subprocess.run(["git", "-C", str(copy2), "rev-parse", "HEAD"], capture_output=True, text=True).stdout
+        gh = FakeGitHub("v9.9.8")
+        try:
+            code, out = self.run_update(copy2, gh.url, root2 / "home")
+        finally:
+            gh.close()
+        self.assertNotEqual(code, 0, out)
+        self.assertIn("was put back", out)
+        self.assertEqual(subprocess.run(["git", "-C", str(copy2), "rev-parse", "HEAD"], capture_output=True, text=True).stdout, before)
+        # local changes to tracked files: refused, nothing changed
+        (copy / "README.md").write_text("changed by hand", encoding="utf-8")
+        (origin / "x.txt").write_text("x")
+        gh = FakeGitHub("v9.9.10")
+        try:
+            code, out = self.run_update(copy, gh.url, root / "home2")
+        finally:
+            gh.close()
+        self.assertNotEqual(code, 0)
+        self.assertIn("changed by hand", out)
+
+    def test_zip_update(self):
+        root = Path(tempfile.mkdtemp(dir=TMP))
+        origin = self.make_release(root, "9.9.9")
+        z = root / "release.zip"
+        subprocess.run(["git", "-C", str(origin), "archive", "--format=zip", "--prefix=The-Data-Application-v9.9.9/", "-o", str(z), "v9.9.9"], check=True)
+        copy = root / "zipcopy"
+        subprocess.run(["git", "clone", "-q", str(ROOT), str(copy)], check=True)
+        shutil.rmtree(copy / ".git")                       # a copy downloaded as a ZIP has no .git
+        gh = FakeGitHub("v9.9.9", zip_path=z)
+        try:
+            code, out = self.run_update(copy, gh.url, root / "home")
+        finally:
+            gh.close()
+        self.assertEqual(code, 0, out)
+        self.assertIn('"9.9.9"', (copy / "app" / "__init__.py").read_text(encoding="utf-8"))
+        self.assertTrue(list((root / "home" / "updates").glob("backup_*.zip")))
 
 
 class Server(unittest.TestCase):

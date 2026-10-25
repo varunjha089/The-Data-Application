@@ -21,6 +21,19 @@ Today it can: **create and open projects, set up a Python environment per projec
 
 Something wrong? The message on the page says what failed and what to do; the full details are in the task's log (Download the log).
 
+## Updates
+
+Like a desktop program, the application looks for a new version by itself: at most once a day, in the background, it asks GitHub for the latest release
+(nothing about you is sent). When there is one, a window shows what's new with **Install and restart**, **Later** and **Skip this version**. Installing
+never touches your projects or data (they are outside the application folder):
+
+- a copy made with `git clone` is updated with git (a fast-forward to the release); it refuses, and changes nothing, if you edited the application's files;
+- a copy downloaded as a ZIP downloads the new release; the current files are backed up first (your settings folder, `updates/`);
+- either way the new version's own tests run first, and if they fail the previous version is put back. Then the application restarts in a new window.
+
+The footer has **Check for updates** and a switch for the automatic check. In a terminal: `python3 the_data_app.py update` (or `--check-only`).
+Copies older than 0.4.0 have no updater: update them once by hand (`git pull`, or download the new ZIP).
+
 ## What you need
 
 - **Python 3.9 or newer** from https://www.python.org/downloads/ (on Windows tick "Add Python to PATH" in the installer; on Debian/Ubuntu also install
@@ -208,6 +221,12 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   `topic_slices.json` in the project folder (written with automatic choices on the first run; format at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`;
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`).
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
+
+## Version 0.4.0 (2026-10-25)
+
+- **Updates by itself** (see *Updates* above): daily check of the latest GitHub release, an update window with the release notes, install through git or
+  the release ZIP with a backup, the new version's tests before it is kept, automatic rollback, restart. `update` command. The tests run real updates in
+  throw-away copies (git, ZIP, a release that fails its tests, a copy edited by hand).
 
 ## Version 0.3.0 (2026-10-24)
 

@@ -14,7 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from . import __version__, config, dataset, envsetup, look, native, pipeline, project as projects, sample, sheets as sheetlist, window, years
+from . import __version__, config, dataset, envsetup, look, native, pipeline, project as projects, sample, sheets as sheetlist, update, window, years
 from .jobs import Jobs, stream
 from .paths import REQUIREMENTS, ROOT, STEPS, default_location
 
@@ -36,6 +36,8 @@ class App:
         self.httpd = ThreadingHTTPServer(("127.0.0.1", port), make_handler(self))
         self.port = self.httpd.server_address[1]
         self.url = f"http://127.0.0.1:{self.port}/?key={self.token}"
+        self.updated = False                # a new version was installed: the window may restart the application
+        threading.Thread(target=update.check, daemon=True).start()       # at most once a day; never blocks the window
 
     # ---------------------------------------------------------------- state shown in the window
     def projects_list(self):
@@ -279,6 +281,8 @@ def make_handler(app):
             pr = app.project
             if p == "/api/status":
                 return self._send(200, app.status())
+            if p == "/api/update":
+                return self._send(200, {**update.state(), "installed": app.updated})
             if p == "/api/projects":
                 return self._send(200, app.projects_list())
             if p == "/api/job":
@@ -355,6 +359,28 @@ def make_handler(app):
                 cfg["ui"] = ui
                 config.app_save(cfg)
                 return self._send(200, {"ok": True})
+            if p == "/api/update/check":
+                return self._send(200, update.check(force=True))
+            if p == "/api/update/settings":
+                return self._send(200, update.set_enabled(body.get("enabled", True)))
+            if p == "/api/update/skip":
+                return self._send(200, update.skip(str(body.get("version", ""))))
+            if p == "/api/update/install":
+                if app.busy():
+                    return self._send(200, {"started": False, "message": "A task is still running: wait until it has finished."})
+
+                def run(log):
+                    ok, msg = update.install(log)
+                    app.updated = app.updated or ok
+                    return ok, msg
+                return self._send(200, {"started": app.jobs.start("update", run)})
+            if p == "/api/update/restart":
+                if not app.updated:
+                    return self._send(200, {"ok": False, "message": "No new version was installed."})
+                update.restart()
+                self._send(200, {"ok": True})
+                threading.Thread(target=app.httpd.shutdown, daemon=True).start()
+                return
             if p == "/api/browse":
                 path, err = native.browse(body.get("kind", "folder"), body.get("title", "venv"))
                 return self._send(200, {"path": path, "error": err})
