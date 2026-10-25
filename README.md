@@ -282,6 +282,14 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.9.1 (2026-10-25)
+
+- **The publisher treemaps are drawn about 8 times faster** (28 s down to under 4 s on a data set of 1,149 papers; at 600 dpi about 5 s instead of
+  minutes). The largest label that fits each rectangle is now computed instead of searched size by size; small rectangles sometimes get their
+  name where they had only numbers before.
+- **Updating from 0.8.0 works again.** In 0.9.0 the update tests ran inside an update's own check, so the check failed and the update was
+  undone; they are skipped there again.
+
 ## Version 0.9.0 (2026-10-25)
 
 - **New page: Report.** Writes the results chapter as LaTeX, one file per figure and table, with three paragraphs each: what the plot or table is

@@ -201,8 +201,6 @@ class FakeGitHub:
         self.httpd.shutdown()
 
 
-@unittest.skipIf(shutil.which("git") is None or not (ROOT / ".git").exists() or os.environ.get("THE_DATA_APP_UPDATING"),
-                 "needs git and a git checkout (and does not run inside an update's own check)")
 class FakeAI:
     """a stand-in for the Anthropic API on 127.0.0.1: lists one model and answers every report item with JSON (one invented number in it)"""
     def __init__(self):
@@ -238,6 +236,8 @@ class FakeAI:
         threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
 
 
+@unittest.skipIf(shutil.which("git") is None or not (ROOT / ".git").exists() or os.environ.get("THE_DATA_APP_UPDATING"),
+                 "needs git and a git checkout (and does not run inside an update's own check)")
 class Updates(unittest.TestCase):
     """the updater, run inside throw-away copies of this repository (never on this folder)"""
 

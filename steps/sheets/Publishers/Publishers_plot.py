@@ -74,34 +74,42 @@ def lines_of(name, width):
     return textwrap.wrap(name, width=width, break_long_words=False) or [name]
 
 
-def block(lines, size):
-    """the text paths of the lines (name lines italic, numbers plain), their width and height at font size `size`"""
-    paths = [TextPath((0, 0), t, size=size, prop=NAME if italic else PLAIN) for t, italic in lines]
-    width = max(p.get_extents().width for p in paths)
-    return paths, width, len(paths) * size * 1.25
+_WIDTH = {}
+
+
+def width1(text, italic):
+    """width of a line of text at font size 1 (measured once: a width grows in proportion to the font size)"""
+    k = (text, italic)
+    if k not in _WIDTH:
+        _WIDTH[k] = TextPath((0, 0), text, size=1, prop=NAME if italic else PLAIN).get_extents().width
+    return _WIDTH[k]
 
 
 def label(ax, x, y, w, h, name, abbr, n, share, big):
-    """the best label that fits the rectangle: full name, abbreviation, numbers only, or nothing"""
+    """the best label that fits the rectangle: full name, abbreviation, numbers only, or nothing. For each way of wrapping the name the
+    largest font size that fits is computed (not searched); the wrapping that allows the largest size wins."""
     nums = [(f"{n:,}", False), (f"{share:.2f}%", False)]
     names = [name] + ([abbr] if isinstance(abbr, str) and abbr and abbr != name else [])
     top = max(6.0, min(22.0 if big else 13.0, math.sqrt(w * h) / 6))
     for candidate in names + [None]:
-        size = top
-        while size >= 5.5:
-            options = [[]] if candidate is None else [lines_of(candidate, k) for k in range(max(8, len(candidate)), 7, -4)]
-            for name_lines in options:
-                lines = [(t, True) for t in name_lines] + nums
-                paths, bw, bh = block(lines, size)
-                if bw <= w - 6 and bh <= h - 4:
-                    cy = y + h / 2 + bh / 2
-                    for p, (t, italic) in zip(paths, lines):
-                        cy -= size * 1.25
-                        e = p.get_extents()
-                        ax.add_patch(PathPatch(p.transformed(Affine2D().translate(x + w / 2 - e.width / 2 - e.x0, cy + size * 0.3)),
-                                               facecolor="#222222", edgecolor="none", lw=0))
-                    return
-            size -= 0.5
+        options = [[]] if candidate is None else [lines_of(candidate, k) for k in range(max(8, len(candidate)), 7, -4)]
+        best = None
+        for name_lines in options:
+            lines = [(t, True) for t in name_lines] + nums
+            fit = min(top, (w - 6) / max(width1(t, i) for t, i in lines), (h - 4) / (len(lines) * 1.25))
+            fit = math.floor(fit * 2) / 2                       # in steps of half a point, as before
+            if fit >= 5.5 and (best is None or fit > best[0]):
+                best = (fit, lines)
+        if best:
+            size, lines = best
+            cy = y + h / 2 + len(lines) * size * 1.25 / 2
+            for t, italic in lines:
+                cy -= size * 1.25
+                p = TextPath((0, 0), t, size=size, prop=NAME if italic else PLAIN)
+                e = p.get_extents()
+                ax.add_patch(PathPatch(p.transformed(Affine2D().translate(x + w / 2 - e.width / 2 - e.x0, cy + size * 0.3)),
+                                       facecolor="#222222", edgecolor="none", lw=0))
+            return
 
 
 pub, src = read("Publishers.csv"), read("Publishers_sources.csv")
