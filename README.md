@@ -95,7 +95,7 @@ Choosing a new file makes the earlier cleaned data "out of date" until you clean
 | Group | Sheets (plot = has a chart) |
 |---|---|
 | Tables | Authors, Affiliations, Countries, References, Author summary |
-| Main information | Main information (plot: documents by type) |
+| Main information | Main information (plot: documents by type), Document types, Languages and Open access (pies), Subject areas (pie and bar chart; needs the Scopus Source List) |
 | Production | Annual production, Average citations per year, Life cycle (plots) |
 | Sources | Top sources (plot), Documents per source, Bradford's law (plot), Bradford core: who publishes there (3 plots per kind: countries, authors, institutions; the first is a population pyramid, core papers left and other papers right), Source impact (plot), Sources over time (plot) |
 | Authors | Authors over time (plot), Lotka's law (plot), Author impact (plot) |
@@ -161,6 +161,7 @@ Each project is a folder where **you** put it:
 <the folder you chose>/<project name>/
   project.json               the project's settings: name, venv, main data, results
   data/raw/                  the copy of the main data
+  data/source_list/          the Scopus Source List you chose for the sheet Subject areas (the newest file is used)
   01_Clean_Data/             results of step 1: cleaned CSV, report, log of the run, copy of the script
   Authors/, 03_Annual_Production/, ...   one folder per sheet that has been generated: its script, CSV, log, and the plot (.png/.svg) if made
   .venv/                     the project's own virtual environment (if you chose "Create a new venv")
@@ -211,6 +212,15 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   script as arguments (how many authors, countries, sources or institutions; keep ties; burst settings; years). A plot of a sheet with data options makes its data again first.
 - **Timelines** (bubbles) for sources, authors, institutions and countries, with a "top n" choice; **Source impact** has eight plots to choose from (bars, two pyramids,
   bubbles, dumbbell, heat map, citations per paper, m-index against first year); **Country radar** (five indicators); **Languages**, **Document types** and **Open access** pies.
+- **Subject areas**: documents by Scopus subject area, as in Scopus's "Documents by subject area" chart. Scopus classifies sources, not papers, and the CSV
+  export has no subject area, so the sheet looks each paper's source up in the **Scopus Source List**, the Excel file Elsevier publishes free of charge
+  ([Scopus content page](https://www.elsevier.com/products/scopus/content/content-policy-and-selection), "the Scopus Source List"). Choose it once on the
+  sheet's page; it is copied into the project's `data/source_list/`. A paper is matched by ISSN, then by source title, then by ISBN or title of a conference
+  proceedings volume; it takes every subject area of its source (the first two digits of its ASJC codes), so it can count in several areas, as in Scopus.
+  The pie shows the shares of all (paper, area) pairs, the top areas and "Other", like Scopus; the bar chart shows papers per area and the share of
+  matched papers. Papers whose source is not in the list (mostly books, which the list does not cover) are counted as "Not matched" and named under the
+  plots; `Subject_Areas_papers.csv` says how each paper was matched. Without a source list the sheet is skipped (no error). The sample project brings a
+  small made-up list, so the sheet can be tried there.
 - **Bursts** for countries, authors and institutions (Kleinberg burst detection on the yearly counts, like CiteSpace's burst history): table, year strip and an HTML page.
   A burst in the last year only is an edge effect.
 - **Bookmarks**: the dot of a menu item can become a red, green, violet or orange star (saved in `project.json`).
@@ -221,6 +231,14 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   `topic_slices.json` in the project folder (written with automatic choices on the first run; format at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`;
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`).
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
+
+## Version 0.6.0 (2026-10-25)
+
+- **New sheet: Subject areas** (group Main information), the "Documents by subject area" chart of Scopus as a pie chart and a bar chart, with a table of
+  every area. The Scopus export has no subject area, so the sheet asks for the **Scopus Source List** (a free Excel file from Elsevier; the page links to
+  it): choose it once on the sheet's page and it is kept in the project. Each paper takes the subject areas of its journal, book series or conference;
+  papers whose source is not in the list are counted as "Not matched". The number of areas with their own slice is a choice on the page (10 by default).
+- A sheet can now ask for a file of yours (shown as a box above its choices); without it the sheet is skipped and **Generate all** goes on.
 
 ## Version 0.5.2 (2026-10-25)
 

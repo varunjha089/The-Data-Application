@@ -17,6 +17,8 @@ _ROWS = [
     ("Document_Types", "Main information", "Document types (pie)", "Papers of each document type, as a pie chart.", [], [("document_types_pie", "Document types: pie chart", ["document_types_pie"])]),
     ("Languages", "Main information", "Languages (pie)", "Papers by language of the original document, as a pie chart.", [], [("languages_pie", "Languages: pie chart", ["languages_pie"])]),
     ("Open_Access", "Main information", "Open access status (pie)", "Papers by open access class (Gold, Hybrid Gold, Bronze, Green, Closed / Unknown), as a pie chart.", [], [("open_access_pie", "Open access: pie chart", ["open_access_pie"])]),
+    ("Subject_Areas", "Main information", "Subject areas", "Documents by Scopus subject area (the 27 areas of the ASJC classification), as in Scopus's \"Documents by subject area\" chart. Scopus classifies sources, not papers: each paper takes the subject areas of its journal, book series or conference, so one paper can count in several areas. Needs the Scopus Source List, an Excel file Elsevier publishes free of charge: choose it below. Papers whose source is not in the list (mostly books) are counted as \"Not matched\".", [],
+     [("subject_areas", "Subject areas: pie chart and bar chart", ["subject_areas_pie", "subject_areas_bar"])]),
     ("03_Annual_Production", "Production", "Annual production", "Documents and total citations per year.", [], [("annual_production", "Annual production", ["annual_production"])]),
     ("04_Avg_Citations", "Production", "Average citations per year", "Mean citations per paper and per year of age.", [], [("average_citations", "Average citations per year", ["average_citations_per_year"])]),
     ("05_Life_Cycle", "Production", "Life cycle", "Cumulative documents and a fitted logistic (S-shaped) growth curve. Incomplete years (the current year and early-access papers) are left out of the fit.", [], [("life_cycle", "Life cycle", ["life_cycle"])]),
@@ -114,6 +116,8 @@ for _n in ("03_Annual_Production", "04_Avg_Citations", "05_Life_Cycle", "11_Sour
     _OPTIONS[_n] = _OPTIONS.get(_n, []) + _year_options("all" if _n in ("03_Annual_Production", "05_Life_Cycle", "Author_Bursts", "Country_Bursts", "Institution_Bursts") else "project")
 _OPTIONS["05_Life_Cycle"].insert(0, {"id": "fit_to", "label": f"Last year used to fit the curve (0 = automatic: the last complete year, now {date.today().year - 1}; later years are still being indexed and would bend the curve down)",
                                      "kind": "number", "default": 0, "min": 0, "max": 2100, "arg": "--fit-to-year"})
+_OPTIONS["Subject_Areas"] = [{"id": "top_areas", "label": "Number of subject areas with their own slice and bar (the others are grouped as \"Other\" in the pie)", "kind": "number",
+                              "default": 10, "min": 3, "max": 27, "arg": "--top", "for": "plot"}]
 _OPTIONS["17_Top_Affiliations"] = [{"id": "by", "label": "Count papers by", "kind": "select", "choices": [("institution", "Institution (each institute on its own)"),
                                     ("parent", "Parent organisation (e.g. the institutes of the Chinese Academy of Sciences together)")], "default": "institution", "arg": "--by"}]
 
@@ -135,10 +139,16 @@ _EXPLAIN = {"09_Bradford": """<h3>How the core sources are calculated</h3>
 </ul>"""}
 _PER_PLOT = {"10_Source_Impact", "Bradford_Core"}        # the plot script makes only the plot asked for (--only ID)
 _DOWNLOADS = {n: [{"file": f"{n}.html", "label": "Download the HTML page"}] for n in ("Country_Bursts", "Author_Bursts", "Institution_Bursts")}      # extra files a task page offers
-_EXTRA_CSV = {"Country_Bursts": ["Country_Bursts_yearly.csv"], "Author_Bursts": ["Author_Bursts_yearly.csv"], "Institution_Bursts": ["Institution_Bursts_yearly.csv"], "Country_Radar": ["Country_Radar_scaled.csv"], "18_Affil_Over_Time": ["18_Affil_Timeline.csv"], "11_Sources_Over_Time": ["11_Source_Timeline.csv"], "21_Countries_Over_Time": ["21_Country_Timeline.csv"], "Country_Collaboration": ["Country_Collaboration_chord.csv"], "14_Author_Over_Time": ["14_Author_Timeline.csv"], "05_Life_Cycle": ["05_Life_Cycle_parameters.csv"], "09_Bradford": ["09_Bradford_zones.csv"], "Topic_Slices": ["Topic_Slices_top_cited.csv", "Topic_Slices_keywords.csv", "Topic_Slices_top_references.csv", "Topic_Slices_term_trend.csv", "Topic_Slices_gap_audit.csv", "Topic_Slices_reference_audit.csv", "Topic_Slices_report.md"], "Bradford_Core": ["Bradford_Core_baseline.csv", "Bradford_Core_matrix.csv"], "15_Lotka": ["15_Lotka_parameters.csv"]}
+_EXTRA_CSV = {"Country_Bursts": ["Country_Bursts_yearly.csv"], "Author_Bursts": ["Author_Bursts_yearly.csv"], "Institution_Bursts": ["Institution_Bursts_yearly.csv"], "Country_Radar": ["Country_Radar_scaled.csv"], "18_Affil_Over_Time": ["18_Affil_Timeline.csv"], "11_Sources_Over_Time": ["11_Source_Timeline.csv"], "21_Countries_Over_Time": ["21_Country_Timeline.csv"], "Country_Collaboration": ["Country_Collaboration_chord.csv"], "14_Author_Over_Time": ["14_Author_Timeline.csv"], "05_Life_Cycle": ["05_Life_Cycle_parameters.csv"], "09_Bradford": ["09_Bradford_zones.csv"], "Topic_Slices": ["Topic_Slices_top_cited.csv", "Topic_Slices_keywords.csv", "Topic_Slices_top_references.csv", "Topic_Slices_term_trend.csv", "Topic_Slices_gap_audit.csv", "Topic_Slices_reference_audit.csv", "Topic_Slices_report.md"], "Bradford_Core": ["Bradford_Core_baseline.csv", "Bradford_Core_matrix.csv"], "15_Lotka": ["15_Lotka_parameters.csv"], "Subject_Areas": ["Subject_Areas_papers.csv"]}
+# a file the user chooses on the sheet's page; it is copied into the project's `folder` and the newest one there is given to the data script as `arg`
+_INPUTS = {"Subject_Areas": {"folder": "data/source_list", "arg": "--source-list", "accept": [".xlsx", ".csv"], "label": "Scopus Source List",
+                             "help": "The Source List is an Excel file (about 30 MB) that Elsevier publishes free of charge and updates a few times a year: "
+                                     "open the page below, download \"the Scopus Source List\" (ext_list_<month>_<year>.xlsx) and choose it here. "
+                                     "It is copied into this project, so the sheet can be made again later with the same list.",
+                             "link": "https://www.elsevier.com/products/scopus/content/content-policy-and-selection"}}
 
 SHEETS = [{"name": n, "group": g, "title": t, "what": w, "needs": needs, "csvs": [f"{n}.csv"] + _EXTRA_CSV.get(n, []),
-           "options": _OPTIONS.get(n, []), "per_plot": n in _PER_PLOT, "downloads": _DOWNLOADS.get(n, []), "explain": _EXPLAIN.get(n, ""), "plots": [{"id": i, "title": pt, "files": files} for i, pt, files in plots]} for n, g, t, w, needs, plots in _ROWS]
+           "options": _OPTIONS.get(n, []), "input": _INPUTS.get(n), "per_plot": n in _PER_PLOT, "downloads": _DOWNLOADS.get(n, []), "explain": _EXPLAIN.get(n, ""), "plots": [{"id": i, "title": pt, "files": files} for i, pt, files in plots]} for n, g, t, w, needs, plots in _ROWS]
 BY_NAME = {s["name"]: s for s in SHEETS}
 GROUPS = list(dict.fromkeys(s["group"] for s in SHEETS))
 
@@ -210,3 +220,14 @@ def has_data_options(name):
 
 def get(name):
     return BY_NAME.get(name)
+
+
+def input_file(project, name):
+    """the file the sheet's data script reads (the newest one the user chose), or None"""
+    spec = BY_NAME.get(name) or {}
+    inp = spec.get("input")
+    if not inp:
+        return None
+    folder = project.dir / inp["folder"]
+    found = [p for p in folder.glob("*") if p.is_file() and p.suffix.lower() in inp["accept"] and not p.name.startswith(("~$", "."))] if folder.is_dir() else []
+    return max(found, key=lambda p: p.stat().st_mtime) if found else None

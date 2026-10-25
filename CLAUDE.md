@@ -6,7 +6,7 @@ committed. The owner's development notes (`PLAN.local.md`, `FUTURE_PLAN.local.md
 
 ## What it is
 
-A desktop application for the scientometric analysis of Scopus CSV exports: clean the export, then generate 34 sheets (tables) in 8 groups, with their plots,
+A desktop application for the scientometric analysis of Scopus CSV exports: clean the export, then generate 35 sheets (tables) in 8 groups, with their plots,
 each from its own readable Python script. It is a small web server on 127.0.0.1 shown in an app window (Chrome/Edge in app mode, else the default browser),
 written with the Python standard library only; the analysis scripts run in a per-project venv with pandas, numpy and matplotlib. Version: `app/__init__.py`.
 
@@ -50,10 +50,11 @@ app/project.py            Project (folder, project.json, python(), main_data(), 
 app/envsetup.py           make or use a venv, check Python and packages (REQUIRED matches requirements.txt), install the missing ones
 app/dataset.py            validate an export (plain-words reasons: Excel file, WoS/RIS, semicolons, not UTF-8, missing columns), copy + SHA-256
 app/pipeline.py           clean_data, run_sheet, run_plot, run_all: copy steps/... into the project, run with the project's python, log, run_info.json
-app/sheets.py             registry of the sheets: group, title, description, needs, extra CSVs, plots, options (_OPTIONS), per-plot sheets
+app/sheets.py             registry of the sheets: group, title, description, needs, extra CSVs, plots, options (_OPTIONS), per-plot sheets,
+                          a file the user chooses (_INPUTS; input_file = the newest one)
 app/years.py              the project's years in the plots: presets last10 / last5 / all / custom, resolved once and SAVED; roll_forward
 app/look.py               the project's plot look -> arguments of steps/common/plotlook.py; table_rows = rows in table pictures
-app/sample.py             made-up Scopus export and the "Sample project" (window button, `sample` command, tests)
+app/sample.py             made-up Scopus export and the "Sample project" (window button, `sample` command, tests), with a made-up Source List
 app/update.py             self-update like a desktop program: daily check of GitHub's latest release, install (git fast-forward or release ZIP + backup),
                           the new version's quick tests, rollback, restart; THE_DATA_APP_UPDATE_API points it elsewhere in tests
 app/jobs.py               one background job at a time with a pollable log; stream() runs a command
@@ -76,6 +77,11 @@ future/                   finished code taken out of the menu (kept for later)
   A script that makes one plot per call goes in `_PER_PLOT` (it gets `--only ID`); extra tables in `_EXTRA_CSV`; downloads in `_DOWNLOADS`; an explanation in `_EXPLAIN`.
 - **A choice on a sheet page**: an entry in `_OPTIONS` (kinds `number`, `check`, `select`; `"for": "plot"` sends it to the plot script only; `show_if` hides it until
   another choice has a value). It is saved in `project.json` and passed as arguments, so the script stays runnable by hand.
+- **A file of the user's that a sheet reads** (like the Scopus Source List of `Subject_Areas`): an entry in `_INPUTS` (folder in the project, script
+  argument, accepted types, label, help, link). The page shows which file is in use and a button to choose one (`POST /api/sheet/input`: copied into
+  `<project>/<folder>/`, earlier files stay, the newest is used); `run_sheet` passes it as the argument. Without it the script prints SKIPPED and writes no
+  CSV: `run_sheet` / `run_plot` then report "skipped" as success, so Generate all goes on. Never ship such a file in the repository (the Source List is
+  Elsevier's and changes a few times a year); the sample project writes a made-up one.
 - **A year axis**: use the helper block of the year plots (`year_args`, `year_window`, `year_label`, `year_axis`, `year_rows`) and add the sheet to the `_year_options`
   loop in `app/sheets.py` (choose whether it follows the project's years or draws all years by default).
 - **A new kind of step** (like the cleaning): a function in `pipeline.py`, a job in `server.py`, a page in `index.html` / `app.js`.

@@ -312,6 +312,23 @@ class Server(unittest.TestCase):
             opts = {o["id"]: o for o in next(s for s in sh["sheets"] if s["name"] == "04_Avg_Citations")["options"]}
             self.assertEqual(opts["years"]["kind"], "select")
             self.assertEqual(opts["year_from"]["show_if"], ["years", "custom"])
+            # a file the user chooses for a sheet (the Scopus Source List): the sample project brings a made-up one; wrong types are refused
+            sa = next(s for s in sh["sheets"] if s["name"] == "Subject_Areas")
+            self.assertEqual(sa["input"]["file"], "sample_source_list.csv")
+
+            def upload(name, data):
+                c = http.client.HTTPConnection("127.0.0.1", app.port, timeout=20)
+                c.request("POST", "/api/sheet/input?sheet=Subject_Areas&name=" + name, data,
+                          {"Host": f"127.0.0.1:{app.port}", "Cookie": "tda=" + app.token, "Content-Length": str(len(data))})
+                out = json.loads(c.getresponse().read())
+                c.close()
+                return out
+            self.assertFalse(upload("list.txt", b"x")["ok"])
+            self.assertFalse(upload("list.xlsx", b"not a zip file")["ok"])
+            self.assertTrue(upload("my_list.csv", b"Source Title,ISSN,ASJC\nA,12345678,1700\n")["ok"])
+            sa = next(s for s in json.loads(call("/api/sheets")[1])["sheets"] if s["name"] == "Subject_Areas")
+            self.assertEqual(sa["input"]["file"], "my_list.csv")
+            self.assertEqual(sheets.option_args(app.project, "Subject_Areas", plot=True), ["--top", "10"])
         finally:
             app.httpd.shutdown()
 
@@ -379,6 +396,22 @@ class FullRun(unittest.TestCase):
         with open(pr.dir / "17_Top_Affiliations" / "17_Top_Affiliations.csv", encoding="utf-8-sig") as f:
             rows = list(csv.DictReader(f))
         self.assertIn("Chinese Academy of Sciences", [r["Parent Organisation"] for r in rows])
+        # subject areas: the sample's made-up source list matches most sources by title; the rest are "Not matched"
+        with open(pr.dir / "Subject_Areas" / "Subject_Areas.csv", encoding="utf-8-sig") as f:
+            areas = list(csv.DictReader(f))
+        self.assertEqual(areas[-1]["Subject Area"], "Not matched (source not in the list)")
+        self.assertAlmostEqual(sum(float(r["Share of Assignments (%)"]) for r in areas[:-1]), 100, delta=0.2)
+        with open(pr.dir / "Subject_Areas" / "Subject_Areas_papers.csv", encoding="utf-8-sig") as f:
+            how = {r["Matched By"] for r in csv.DictReader(f)}
+        self.assertEqual(how, {"Source title", "not matched"})
+        # without a source list the sheet is skipped, not an error, and Generate all plots goes on
+        (pr.dir / "data" / "source_list" / "sample_source_list.csv").rename(TMP / "kept_source_list.csv")
+        (pr.dir / "Subject_Areas" / "Subject_Areas.csv").unlink()
+        ok, msg = pipeline.run_sheet(pr, "Subject_Areas", log.append)
+        self.assertTrue(ok and "skipped" in msg, msg)
+        self.assertFalse((pr.dir / "Subject_Areas" / "Subject_Areas.csv").exists())
+        ok, msg = pipeline.run_plot(pr, "Subject_Areas", "subject_areas", log.append)
+        self.assertTrue(ok and "skipped" in msg, msg)
         # a failure is explained in plain words
         (pr.dir / "Affiliations" / "Affiliations.csv").write_text("EID\n1\n", encoding="utf-8")
         ok, msg = pipeline.run_sheet(pr, "17_Top_Affiliations", log.append)

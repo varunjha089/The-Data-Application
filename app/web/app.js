@@ -342,6 +342,7 @@ function renderSheet(name) {
   $("sh-run").textContent = s.done ? "Generate the data again" : "Generate data";
   $("sh-run").disabled = !canRun;
   $("sh-run").onclick = () => runJob("/api/sheet/run", { name }, "sh-msg");
+  renderInput(name, s.input);
   s.options = s.options || [];                      // an older server process sends no options
   $("sh-options").classList.toggle("hidden", !s.options.length);
   const yearsNote = (o) => o.id === "years" && s.plot_years ? " <span class=\"info\">(now: " + (s.plot_years[0] || s.plot_years[1] ? (s.plot_years[0] || "start") + "\u2013" + (s.plot_years[1] || "last year") : "all years") + ")</span>" : "";
@@ -400,6 +401,31 @@ function renderSheet(name) {
     if (!curCsv || !s.csvs.some((c) => c.file === curCsv)) curCsv = first.file;
     loadTable(name);
   }
+}
+// a file of the user's that the sheet reads (the Scopus Source List): which one is in use, and a button to choose another
+function renderInput(name, inp) {
+  $("sh-input").classList.toggle("hidden", !inp);
+  if (!inp) return;
+  $("sh-input").innerHTML = "<b>" + esc(inp.label) + ":</b> " + (inp.file ? "using <b>" + esc(inp.file) + "</b> (" + inp.mb + " MB, chosen " + day(inp.when) + ")."
+      : '<span style="color: var(--bad)">none chosen yet</span>: without it this sheet is skipped.') +
+    ' <button id="sh-input-choose">' + (inp.file ? "Choose another file" : "Choose the " + esc(inp.label)) + "</button>" +
+    '<p class="info">' + esc(inp.help) + ' <a href="' + esc(inp.link) + '" target="_blank" rel="noopener">Elsevier: Scopus content and the Source List</a></p>' +
+    '<span id="sh-input-msg" class="msg"></span>';
+  $("sh-input-file").accept = inp.accept.join(",");
+  $("sh-input-choose").onclick = () => $("sh-input-file").click();
+  $("sh-input-file").onchange = async () => {
+    const f = $("sh-input-file").files[0];
+    if (!f) return;
+    setMsg("sh-input-msg", "Copying " + f.name + " (" + (f.size / 1048576).toFixed(1) + " MB) ...", "warn");
+    setBusy(true);
+    let r;
+    try { r = await (await fetch("/api/sheet/input?sheet=" + encodeURIComponent(name) + "&name=" + encodeURIComponent(f.name), { method: "POST", body: f })).json(); }
+    catch (e) { r = { ok: false, message: "The copy failed: " + e }; }
+    $("sh-input-file").value = "";
+    setBusy(false);
+    if (r.ok) { sheetsInfo = await api("/api/sheets"); renderSheet(name); }
+    setMsg("sh-input-msg", r.message, r.ok ? "ok" : "bad");
+  };
 }
 async function loadTable(name) {
   const t = await api("/api/sheet/table?name=" + encodeURIComponent(name) + "&csv=" + encodeURIComponent(curCsv) + "&page=" + curPage + "&size=50");

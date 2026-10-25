@@ -161,6 +161,23 @@ def write_csv(path, seed=7, today=None):
     return len(rows)
 
 
+# made-up ASJC codes for the sources of the sample (the real ones are in Elsevier's Scopus Source List); the last sources are left out on purpose
+SAMPLE_ASJC = ["1903; 2305", "1903; 1900", "2312", "2312; 2305", "1900; 2208", "2208; 1903", "1904; 2312", "2304; 2310", "1903; 1706", "2312; 1105",
+               "1902; 2305", "2305; 3305", "1706; 2302", "1900"] + ["1700; 2600", "2200", "1100; 2303", "3100", "1800; 1700", "3300", "2500; 2200"] * 4
+
+
+def write_source_list(path):
+    """a small made-up stand-in for the Scopus Source List (its column headings, made-up ISSNs and ASJC codes), for the sheet Subject_Areas"""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow(["Source Title", "ISSN", "EISSN", "All Science Journal Classification Codes (ASJC)"])
+        for k, (title, _, _) in enumerate(SOURCES[:len(SOURCES) - 4]):
+            w.writerow([title, f"9{k:07d}", "", SAMPLE_ASJC[k % len(SAMPLE_ASJC)]])
+    return path
+
+
 def create_sample_project(location=None):
     """a new project "Sample project" (or "Sample project 2", ...) with the made-up export as its main data; returns (Project, None) or (None, error)"""
     names = {p["name"].lower() for p in projects.list_projects() if p["exists"]}
@@ -174,4 +191,5 @@ def create_sample_project(location=None):
     dst = pr.raw / "sample_scopus_export.csv"
     n = write_csv(dst)
     dataset.register(pr, dst, "made up by The Data Application (app/sample.py)", n)
+    write_source_list(pr.dir / "data" / "source_list" / "sample_source_list.csv")
     return pr, None

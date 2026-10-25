@@ -5,11 +5,13 @@ Nothing here does the real work: it calls the same modules the terminal commands
 """
 import csv
 import json
+import os
 import re
 import secrets
 import sys
 import threading
 import time
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
@@ -157,8 +159,48 @@ class App:
             out.append({**{k: spec[k] for k in ("name", "group", "title", "what", "needs")}, **st, "csvs": csvs, "plots": plots,
                         "log": (pr.dir / spec["name"] / f"{spec['name']}_log.txt").exists(),
                         "explain": spec["explain"], "downloads": [{**d, "exists": (pr.dir / spec["name"] / d["file"]).exists()} for d in spec["downloads"]], "options": [{**o, "value": sheetlist.option_values(pr, spec["name"])[o["id"]]} for o in spec["options"]],
-                        "plot_years": sheetlist.plot_years(pr, spec["name"]), "run_info": (pr.dir / spec["name"] / "run_info.json").exists()})
+                        "plot_years": sheetlist.plot_years(pr, spec["name"]), "run_info": (pr.dir / spec["name"] / "run_info.json").exists(),
+                        "input": self.input_info(pr, spec)})
         return {"sheets": out, "groups": sheetlist.GROUPS, "clean_ready": pr.clean_file.exists(), "bookmarks": pr.load().get("bookmarks") or {}}
+
+    @staticmethod
+    def input_info(pr, spec):
+        """the file a sheet reads that the user chooses (e.g. the Scopus Source List): what it is and which file is in use"""
+        if not spec.get("input"):
+            return None
+        f = sheetlist.input_file(pr, spec["name"])
+        return {**spec["input"], "file": f.name if f else None, "mb": round(f.stat().st_size / 1048576, 1) if f else 0,
+                "when": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%dT%H:%M:%S") if f else None}
+
+    def save_input(self, pr, sheet, name, stream_in, length):
+        """copy a file the user chose for a sheet into the project (<project>/<input folder>/); earlier files stay, the newest is used"""
+        spec = sheetlist.get(sheet)
+        inp = spec.get("input") if spec else None
+        if not inp:
+            return False, "This sheet does not read a file of yours."
+        safe = re.sub(r"[^\w .()+\-]", "_", Path(unquote(name)).name).strip()
+        if Path(safe).suffix.lower() not in inp["accept"]:
+            return False, f"Choose a file of type {' or '.join(inp['accept'])} (the {inp['label']})."
+        folder = pr.dir / inp["folder"]
+        folder.mkdir(parents=True, exist_ok=True)
+        part = folder / (safe + ".part")
+        left = length
+        with open(part, "wb") as f:
+            while left > 0:
+                chunk = stream_in.read(min(1 << 20, left))
+                if not chunk:
+                    break
+                f.write(chunk)
+                left -= len(chunk)
+        with open(part, "rb") as f:
+            head = f.read(4)
+        if left > 0 or (safe.lower().endswith(".xlsx") and head != b"PK\x03\x04"):
+            part.unlink(missing_ok=True)
+            return False, "The copy was not complete." if left > 0 else "This is not an Excel (.xlsx) file: download the Source List again."
+        dst = folder / safe
+        part.replace(dst)
+        os.utime(dst)                                            # the newest file is the one in use
+        return True, f"Copied to {pr.rel(dst)} ({dst.stat().st_size / 1048576:.1f} MB). Generate the data to use it."
 
     @staticmethod
     def plot_file(pr, name, f):
@@ -350,6 +392,13 @@ def make_handler(app):
                 name = parse_qs(u.query).get("name", ["scopus_export.csv"])[0]
                 length = int(self.headers.get("Content-Length") or 0)
                 ok, msg = app.save_upload(pr, name, self.rfile, length)
+                return self._send(200, {"ok": ok, "message": msg})
+            if p == "/api/sheet/input":
+                if pr is None:
+                    return self._send(409, {"error": "no project is open"})
+                q = parse_qs(u.query)
+                length = int(self.headers.get("Content-Length") or 0)
+                ok, msg = app.save_input(pr, q.get("sheet", [""])[0], q.get("name", [""])[0], self.rfile, length)
                 return self._send(200, {"ok": ok, "message": msg})
             body = self._json_body()
             if p == "/api/settings":                                  # text size and theme: settings of the application itself

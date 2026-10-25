@@ -267,8 +267,13 @@ def run_sheet(project, name, log, _chain=()):
         if raw is None:
             return False, "No main data chosen yet (Settings)."
         args = ["--raw", raw]
+    chosen = sheetlist.input_file(project, name)
+    if chosen is not None:
+        args += [spec["input"]["arg"], chosen]
     log(f"=== {name}")
     ok, msg = _run_script(project, name, f"{name}.py", args, f"sheet {name}", log, f"{name}_log.txt", "data")
+    if ok and not sheet_csv(project, name).exists():                     # the script skipped itself (an input it needs is missing): it said why in the log
+        return True, f"{spec['title']}: skipped, nothing generated: " + (f"choose the {spec['input']['label']} on this page first." if spec.get("input") else "see the log.")
     if ok:
         make_table_pictures(project, name, log)
     return (ok, f"{spec['title']}: data generated." if ok else msg)
@@ -283,6 +288,8 @@ def run_plot(project, name, plot_id, log):
         ok, msg = run_sheet(project, name, log)
         if not ok:
             return False, msg
+        if not sheet_csv(project, name).exists():                          # skipped: no plot without data, and no error (Generate all plots goes on)
+            return True, msg
     log(f"=== plot of {name}")
     wrap = look.args(project)
     prefix = [project.dir / "common" / "plotlook.py"] + wrap if wrap else []
@@ -305,12 +312,12 @@ def run_all(project, log, plots=False):
                 continue
             for pl in (spec["plots"] if spec.get("per_plot") else spec["plots"][:1]):         # a script that makes one plot per call is called for each of its plots
                 ok, msg = run_plot(project, spec["name"], pl["id"], log)
-                done += ok
+                done += ok and sheet_csv(project, spec["name"]).exists()
                 if not ok:
                     break
         else:
             ok, msg = run_sheet(project, spec["name"], log)
-            done += ok
+            done += ok and sheet_csv(project, spec["name"]).exists()
         if not ok:
             return False, f"Stopped at {spec['name']}: {msg}"
     return True, f"{done} {'plots' if plots else 'sheets'} generated."
