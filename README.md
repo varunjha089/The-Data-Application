@@ -229,8 +229,14 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
 - **Merged searches**: when the export carries `Query_IDs` / `N_Queries` (several Scopus searches merged), the Clean page has **Searches to drop** (papers found only by a
   noise search, e.g. `Q3`), and the sheet **Topic_Slices** cuts the analysis by search, with term trends and an optional gap audit. What it cuts and looks for is set in
   `topic_slices.json` in the project folder (written with automatic choices on the first run; format at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`;
-  an example for the sample project in `steps/sheets/Topic_Slices/examples/`).
+  an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
+
+## Version 0.6.1 (2026-10-25)
+
+- **Generate all no longer stops at Topic slices** on a data set of one search. Topic slices needs the columns Query_IDs and N_Queries (merged Scopus
+  searches); without them, or without a References table, the sheet is now skipped with a message, like References and Subject areas, and the sheets
+  after it (Most cited documents) are generated too.
 
 ## Version 0.6.0 (2026-10-25)
 

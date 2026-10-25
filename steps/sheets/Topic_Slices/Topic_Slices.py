@@ -5,6 +5,8 @@ Input : 01_Clean_Data/clean_main_data.csv (needs Query_IDs and N_Queries, made b
         and, in the PROJECT folder (next to 01_Clean_Data), topic_slices.json: what to cut and what to look for. If it is missing, the first run writes one for you to edit.
 Output: Topic_Slices.csv (the overview), Topic_Slices_top_cited.csv, Topic_Slices_top_references.csv, Topic_Slices_keywords.csv, Topic_Slices_term_trend.csv, Topic_Slices_report.md,
         and, when topic_slices.json defines an "audit": Topic_Slices_gap_audit.csv; when it defines "literature": Topic_Slices_reference_audit.csv and the two "cites" lists
+        A data set without Query_IDs (one search, not merged) or without References.csv (an export made without references) is SKIPPED with a message:
+        nothing is written and the script ends normally, so "Generate all" goes on with the other sheets.
 Run   : python3 Topic_Slices.py
 topic_slices.json (every key optional; patterns are regular expressions, matched in lower case on title + abstract + keywords, or on reference text):
   slices            [{"name": ..., "searches": ["Q02", ...], "min_searches": 4}]  a slice = papers found by any listed search, or by at least min_searches searches
@@ -54,10 +56,15 @@ def remove(name):
 
 
 d = read_csv(SHEETS / "01_Clean_Data" / "clean_main_data.csv")
+if "Query_IDs" not in d.columns:
+    print("SKIPPED: Topic_Slices needs the columns Query_IDs and N_Queries (made by merging several Scopus search exports). This data set does not have them,")
+    print("so the sheet does not apply to it and nothing was written.")
+    raise SystemExit(0)
+if not (SHEETS / "References" / "References.csv").exists():
+    print("SKIPPED: Topic_Slices needs References/References.csv, and the References sheet was skipped (the export was made without the References option).")
+    raise SystemExit(0)
 refs = read_csv(SHEETS / "References" / "References.csv")
 countries = read_csv(SHEETS / "Countries" / "Countries.csv")[["EID", "Country"]].drop_duplicates()
-if "Query_IDs" not in d.columns:
-    raise SystemExit("Topic_Slices needs the columns Query_IDs and N_Queries (made by merging several Scopus search exports). This data set does not have them.")
 d["qs"] = d["Query_IDs"].fillna("").str.split(";")
 d["text"] = (d["Title"].fillna("") + " . " + d["Abstract"].fillna("") + " . " + d["Author Keywords"].fillna("") + " . " + d["Index Keywords"].fillna("")).str.lower()
 

@@ -82,6 +82,8 @@ future/                   finished code taken out of the menu (kept for later)
   `<project>/<folder>/`, earlier files stay, the newest is used); `run_sheet` passes it as the argument. Without it the script prints SKIPPED and writes no
   CSV: `run_sheet` / `run_plot` then report "skipped" as success, so Generate all goes on. Never ship such a file in the repository (the Source List is
   Elsevier's and changes a few times a year); the sample project writes a made-up one.
+- **A sheet that does not apply to a data set** (no References column, no Query_IDs, no Source List): its script prints `SKIPPED: <why>` and ends with
+  exit code 0 without writing its first CSV; never `raise SystemExit("...")`, which is an error and stops Generate all at that sheet.
 - **A year axis**: use the helper block of the year plots (`year_args`, `year_window`, `year_label`, `year_axis`, `year_rows`) and add the sheet to the `_year_options`
   loop in `app/sheets.py` (choose whether it follows the project's years or draws all years by default).
 - **A new kind of step** (like the cleaning): a function in `pipeline.py`, a job in `server.py`, a page in `index.html` / `app.js`.

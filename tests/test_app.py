@@ -412,6 +412,20 @@ class FullRun(unittest.TestCase):
         self.assertFalse((pr.dir / "Subject_Areas" / "Subject_Areas.csv").exists())
         ok, msg = pipeline.run_plot(pr, "Subject_Areas", "subject_areas", log.append)
         self.assertTrue(ok and "skipped" in msg, msg)
+        # a data set of one search (no Query_IDs): Topic_Slices does not apply and is skipped, so Generate all goes on
+        with open(pr.clean_file, encoding="utf-8-sig", newline="") as f:
+            rows = list(csv.DictReader(f))
+        keep = [c for c in rows[0] if c not in ("Query_IDs", "N_Queries")]
+        with open(pr.clean_file, "w", encoding="utf-8-sig", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=keep, extrasaction="ignore")
+            w.writeheader()
+            w.writerows(rows)
+        for old in (pr.dir / "Topic_Slices").glob("Topic_Slices*.csv"):
+            old.unlink()
+        ok, msg = pipeline.run_sheet(pr, "Topic_Slices", log.append)
+        self.assertTrue(ok and "skipped" in msg, msg + "\n" + "\n".join(log[-5:]))
+        ok, msg = pipeline.run_sheet(pr, "23_Top_Cited", log.append)          # the sheet after it in the menu still runs
+        self.assertTrue(ok, msg)
         # a failure is explained in plain words
         (pr.dir / "Affiliations" / "Affiliations.csv").write_text("EID\n1\n", encoding="utf-8")
         ok, msg = pipeline.run_sheet(pr, "17_Top_Affiliations", log.append)
