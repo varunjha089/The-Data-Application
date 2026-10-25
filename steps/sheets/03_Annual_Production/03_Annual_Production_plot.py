@@ -1,5 +1,9 @@
-"""Plot of the sheet "03_Annual_Production": documents (bars) and total citations (line) per year
-Input : 03_Annual_Production.csv in this folder (run 03_Annual_Production.py first)        Output: annual_production (.png and .svg, same folder)
+"""Plots of the sheet "03_Annual_Production":
+  annual_production   documents (bars) and total citations (line) per year
+  annual_trend        documents per year (bars from light yellow to dark red as the years go by, with their numbers) and a log trend line: the exponential
+                      ln(documents) = a + b x year fitted by least squares, with R^2 (on the log scale) and the growth per year e^b - 1. Years without papers
+                      cannot be fitted (ln 0); years after the last complete year (still being indexed) are drawn hatched and left out of the fit.
+Input : 03_Annual_Production.csv in this folder (run 03_Annual_Production.py first)        Output: annual_production and annual_trend (.png and .svg, same folder)
 Run   : python3 03_Annual_Production_plot.py   (needs matplotlib)
 """
 from pathlib import Path
@@ -119,3 +123,35 @@ h2, l2 = ax2.get_legend_handles_labels()
 ax.legend(h1 + h2, l1 + l2, loc="upper center", bbox_to_anchor=(0.5, -0.14), ncol=2, frameon=False)
 ax.set_title("Annual scientific production")
 save(fig, "annual_production")
+
+# 2. the log trend line
+last = datetime.date.today().year - 1                       # the last complete year; later years are still being indexed
+fit = t[(t["Documents"] > 0) & (t["Year"] <= last)]
+fig, ax = plt.subplots(figsize=(12, 5.5))
+shade = plt.get_cmap("YlOrRd")(0.2 + 0.75 * (t["Year"] - start) / max(1, end - start))
+late = (t["Year"] > last).to_numpy()
+ax.bar(t["Year"], t["Documents"], color=shade, width=0.8, edgecolor="white", hatch=None)
+if late.any():
+    ax.bar(t["Year"][late], t["Documents"][late], color="none", width=0.8, edgecolor="#555555", hatch="//", lw=0, label="Not in the fit (year still being indexed)")
+for x, v in zip(t["Year"], t["Documents"]):
+    ax.text(x, v, f"{v:,}", ha="center", va="bottom", fontsize=9, color="#333333")
+if len(fit) >= 3:
+    b, a = np.polyfit(fit["Year"], np.log(fit["Documents"]), 1)
+    y = np.log(fit["Documents"].to_numpy(dtype=float))
+    r2 = 1 - ((y - (a + b * fit["Year"].to_numpy())) ** 2).sum() / ((y - y.mean()) ** 2).sum()
+    xs = np.linspace(fit["Year"].min(), fit["Year"].max(), 200)
+    ax.plot(xs, np.exp(a + b * xs), color="#1F3FD6", lw=2.8, label="Log trend line")
+    ax.text(0.1, 0.86, f"ln(documents) = {a:.2f} + {b:.2f} \u00d7 year   (R\u00b2 = {r2:.2f})", transform=ax.transAxes, fontsize=12, fontweight="bold", color="#333333")
+    ax.text(0.1, 0.79, f"growth of {100 * (np.exp(b) - 1):.2f} % per year ({fit['Year'].min()}-{fit['Year'].max()})", transform=ax.transAxes, fontsize=11, color="#333333")
+    print(f"log trend line {fit['Year'].min()}-{fit['Year'].max()}: ln(documents) = {a:.2f} + {b:.4f} x year, R2 = {r2:.2f}, growth {100 * (np.exp(b) - 1):.2f} % per year")
+else:
+    print("log trend line: fewer than 3 years with papers, no line drawn")
+ax.set_xlabel(xlab)
+year_axis(ax, t["Year"])
+ax.set_ylabel("Number of documents")
+ax.set_ylim(0, t["Documents"].max() * 1.12)
+ax.grid(axis="x", visible=False)
+if ax.get_legend_handles_labels()[0]:
+    ax.legend(loc="upper left", frameon=True)
+ax.set_title("Annual scientific production with a log trend line")
+save(fig, "annual_trend")

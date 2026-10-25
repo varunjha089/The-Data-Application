@@ -96,8 +96,8 @@ Choosing a new file makes the earlier cleaned data "out of date" until you clean
 |---|---|
 | Tables | Authors, Affiliations, Countries, References, Author summary |
 | Main information | Main information (plot: documents by type), Document types, Languages and Open access (pies), Subject areas (pie and bar chart; needs the Scopus Source List) |
-| Production | Annual production, Average citations per year, Life cycle (plots) |
-| Sources | Top sources (plot), Documents per source, Bradford's law (plot), Bradford core: who publishes there (3 plots per kind: countries, authors, institutions; the first is a population pyramid, core papers left and other papers right), Source impact (plot), Sources over time (plot) |
+| Production | Annual production (2 plots: with total citations, and with a log trend line), Average citations per year, Life cycle (plots) |
+| Sources | Top sources (plot), Documents per source, Bradford's law (plot), Publishers (treemaps of the largest publishers' sources), Bradford core: who publishes there (3 plots per kind: countries, authors, institutions; the first is a population pyramid, core papers left and other papers right), Source impact (plot), Sources over time (plot) |
 | Authors | Authors over time (plot), Lotka's law (plot), Author impact (plot) |
 | Affiliations | Top affiliations (plot), Affiliations over time (plot) |
 | Countries | Corresponding authors' countries (plot), Countries' production and citations (2 plots), Country collaboration pairs (plot), Country collaboration chord (chord diagram) |
@@ -218,6 +218,16 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   abbreviation in brackets with its full name ("retrieval augmented generation (rag)" also makes "rag" count as "retrieval augmented generation"); the table's
   column Variants lists what was merged (switch it off on the page). Choose how many keywords are drawn, and leave out the most used ones (the words of
   your search, which are in nearly every paper); they stay in the table and are named under the picture. Drawn without any extra package.
+- **Log trend line** (Annual production): the documents per year as bars shaded from light yellow to dark red, with the exponential ln(documents) =
+  a + b x year fitted by least squares, its R² and the growth per year (e^b - 1). Years without papers cannot be fitted; years after the last complete
+  year are still being indexed, so they are drawn hatched and left out of the fit.
+- **Publishers**: the export writes one publisher in many ways ("MDPI", "MDPI AG" with an address and an e-mail, "Multidisciplinary Digital Publishing
+  Institute (MDPI)"), so the names are merged first: e-mail addresses are removed, the large publishers are recognised by a word of their name (Elsevier with
+  Academic Press; Springer Nature with Nature Research and BioMed Central; Wiley with Blackwell; Taylor & Francis with Routledge and CRC Press; IEEE; ...),
+  and the company form at the end (Inc., Ltd, B.V., ...) is dropped; the table lists the names merged into each publisher. A source belongs to the
+  publisher named most often on its papers. The plot draws one treemap per publisher with the most documents (choose how many, and how many sources
+  each shows; the rest form "Other sources"): every source is a rectangle sized by its documents, labelled with its documents and its share of the
+  publisher. A name that does not fit is replaced by the source's abbreviation. Papers without a source title are not drawn; their number is given.
 - **Subject areas**: documents by Scopus subject area, as in Scopus's "Documents by subject area" chart. Scopus classifies sources, not papers, and the CSV
   export has no subject area, so the sheet looks each paper's source up in the **Scopus Source List**, the Excel file Elsevier publishes free of charge
   ([Scopus content page](https://www.elsevier.com/products/scopus/content/content-policy-and-selection), "the Scopus Source List"). Choose it once on the
@@ -237,6 +247,14 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   `topic_slices.json` in the project folder (written with automatic choices on the first run; format at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`;
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
+
+## Version 0.8.0 (2026-10-25)
+
+- **New plot: annual production with a log trend line** (sheet Annual production). Bars shaded from light yellow to dark red by year, with their
+  numbers, and the fitted exponential with its equation, R² and the growth per year. The year still being indexed is left out of the fit.
+- **New sheet: Publishers** (group Sources). The many ways the export writes one publisher are merged ("MDPI", "MDPI AG ...", "Multidisciplinary
+  Digital Publishing Institute (MDPI)" are one publisher), then one treemap per largest publisher shows how its documents are spread over its
+  sources. Choose how many publishers (default 4) and how many sources per treemap (default 12). No new package is needed.
 
 ## Version 0.7.0 (2026-10-25)
 

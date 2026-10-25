@@ -369,6 +369,31 @@ class FullRun(unittest.TestCase):
         self.assertEqual(got, {"retrieval augmented generation": 3, "knowledge graph": 2, "large language model": 2, "python (snake)": 1, "analysis": 1})
         self.assertTrue((folder / "Word_Cloud" / "word_cloud.png").exists())
 
+    def test_publisher_names_merge(self):
+        """the ways the export writes one publisher are one publisher; a source belongs to the publisher named most often; the treemaps are drawn"""
+        folder = TMP / "publishers"
+        (folder / "01_Clean_Data").mkdir(parents=True, exist_ok=True)
+        (folder / "Publishers").mkdir(exist_ok=True)
+        rows = [("1", "Remote Sensing", "MDPI"), ("2", "Remote Sensing", "MDPI AG info@example.org Postfach Basel"),
+                ("3", "Remote Sensing", "Multidisciplinary Digital Publishing Institute (MDPI)"), ("4", "Remote Sensing", "Elsevier B.V."),
+                ("5", "Journal of Hydrology", "Elsevier B.V."), ("6", "Journal of Hydrology", "Academic Press Inc."), ("7", "", "Elsevier Ltd"),
+                ("8", "Small Journal", "Small Society Ltd."), ("9", "Other Journal", "")]
+        with open(folder / "01_Clean_Data" / "clean_main_data.csv", "w", newline="", encoding="utf-8-sig") as f:
+            w = csv.writer(f)
+            w.writerow(["EID", "Source title", "Publisher", "Cited by"])
+            w.writerows([("2-s2.0-" + e, s, p, "1") for e, s, p in rows])
+        for name in ("Publishers.py", "Publishers_plot.py"):
+            shutil.copy(ROOT / "steps" / "sheets" / "Publishers" / name, folder / "Publishers" / name)
+        for script in ("Publishers.py", "Publishers_plot.py"):
+            r = subprocess.run([sys.executable, script], cwd=folder / "Publishers", capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stdout[-2000:] + r.stderr[-2000:])
+        with open(folder / "Publishers" / "Publishers.csv", encoding="utf-8-sig") as f:
+            got = {row["Publisher"]: int(row["Documents"]) for row in csv.DictReader(f)}
+        self.assertEqual(got, {"MDPI": 4, "Elsevier": 3, "Small Society": 1, "Unknown publisher": 1})
+        with open(folder / "Publishers" / "Publishers.csv", encoding="utf-8-sig") as f:
+            self.assertNotIn("@", f.read())                                   # e-mail addresses in the export never reach the table
+        self.assertTrue((folder / "Publishers" / "publisher_treemaps.png").exists())
+
     def test_same_doi_twice(self):
         """one paper indexed twice under two titles (same DOI): the cleaning keeps the first, instead of stopping at the check "no DOI appears twice\""""
         rows = sample.make_rows()
