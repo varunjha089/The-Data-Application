@@ -82,9 +82,10 @@ A task needs the cleaned data (step 1); a task that needs another sheet (for exa
 (50 rows per page, with a tab for each extra table, such as the parameters of the fitted curve); the **plots** with PNG and SVG downloads; and buttons to download the CSV and the log or to show the folder.
 Every run is logged in the sheet's folder (`<Sheet>_log.txt`).
 
-**Settings: Python environment.** Choose **Create a new venv** inside this project (recommended; it installs the packages from `requirements.txt`, with the progress
-shown), **Use a venv I already have** (type its folder, or Browse; missing packages are installed there on request), or **Use the venv of another project**
-(so that several projects share one environment and nothing is installed twice). A project made before a package was needed (for example matplotlib, for the plots) shows
+**Settings: Python environment.** Choose **Use the shared venv** (recommended): one virtual environment for all projects, kept in the application's
+settings folder (macOS `~/Library/Application Support/The Data Application/venv`), so it is installed only once (about 200 MB) and deleting a project never
+removes it; it is made and filled from `requirements.txt` the first time, with the progress shown. Or **Use a venv I already have** (type its folder, or
+Browse; missing packages are installed there on request). A project that still has its own `.venv` from an earlier version offers a button to delete it. A project made before a package was needed (for example matplotlib, for the plots) shows
 **Install the missing packages**; until then cleaning and tables work, plots wait.
 
 **Settings: Main data.** Press **Choose the Scopus CSV...** and pick the file. It is **copied into the project's `data/raw/`**; your original is never touched or moved.
@@ -199,7 +200,7 @@ Each project is a folder where **you** put it:
   Authors/, 03_Annual_Production/, ...   one folder per sheet that has been generated: its script, CSV, log, and the plot (.png/.svg) if made
   Report/                    the report: report.tex (or your template), results_chapter.tex, results/<one file per figure and table>.tex,
                              figures/, report_check.txt (numbers to check), report_log.txt, report_manifest.json (what the application wrote)
-  .venv/                     the project's own virtual environment (if you chose "Create a new venv")
+  (no venv: all projects share <settings folder>/venv; a .venv here is from before 0.9.9 and can be deleted in Settings)
 ```
 
 The application's own few settings (text size, theme, the list of projects, the last project and location, and a log) are kept in your user settings folder, not in the
@@ -216,7 +217,7 @@ default: the only one, or the last opened):
 python3 the_data_app.py projects                      # list the projects
 python3 the_data_app.py new "My project" --location ~/Documents   # create a project (its folder is made inside ~/Documents)
 python3 the_data_app.py add /path/to/project            # add an existing project folder (contains project.json) to the list
-python3 the_data_app.py env  -p "My project" --create # or: --venv /path/to/venv
+python3 the_data_app.py env  -p "My project" --create # the shared venv; or: --venv /path/to/venv
 python3 the_data_app.py data -p "My project" export.csv
 python3 the_data_app.py clean -p "My project"
 python3 the_data_app.py run -p "My project"            # every sheet's data; add --plots for every plot
@@ -232,7 +233,7 @@ python3 the_data_app.py gui --no-window               # start the server only an
 The application is on GitHub: https://github.com/varunjha089/The-Data-Application (MIT licence). Send that link, or send the application folder as it is: it contains no projects, data, settings or environments of yours (those are in the folders you chose and in your user settings folder).
 Your friend opens the application, creates a project in a folder of their choice, and the window sets everything up on their computer. (`CLAUDE.md` is the guide for
 developers.) On a Mac, a downloaded copy of the `.app` is blocked once by Gatekeeper: right-click it, choose Open, confirm. To share a **project** (not the application),
-copy its folder without `.venv` (a venv does not work on another system) and open it on the other computer with "A project that is not in the list".
+copy its folder (without an old `.venv`, if it has one) and open it on the other computer with "A project that is not in the list".
 
 ## What comes next
 
@@ -282,11 +283,18 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.9.9 (2026-10-26)
+
+- **One shared venv for all projects.** Instead of a venv in every project (about 200 MB each), the projects share one, kept in the
+  application's settings folder (macOS `~/Library/Application Support/The Data Application/venv`): it is installed once, and deleting
+  a project never removes it. Settings, *Use the shared venv*, makes it the first time. A project that still has its own `.venv` shows
+  how much space it takes and a button to delete it once the project uses the shared venv.
+
 ## Version 0.9.8 (2026-10-26)
 
 - **Fix: using a venv you already have.** The application followed the link inside the venv (`bin/python3`) to the system's Python, so
   the packages were installed into Homebrew's Python, which refuses that ("externally-managed-environment"). The venv's own Python is
-  used now. If a system Python is ever chosen, the application says so plainly and points to *Create a new venv* instead of showing
+  used now. If a system Python is ever chosen, the application says so plainly and points to *Use the shared venv* instead of showing
   pip's error.
 
 ## Version 0.9.7 (2026-10-26)

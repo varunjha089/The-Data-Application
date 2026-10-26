@@ -113,6 +113,18 @@ class Validation(unittest.TestCase):
 
 
 class Pieces(unittest.TestCase):
+    def test_shared_venv(self):
+        """all projects share one venv in the settings folder (never inside a project, never in the application folder)"""
+        from app import paths
+        pr = new_project("Shared venv test")
+        pr.set_python(paths.shared_python())
+        self.assertEqual(pr.load()["python"], "shared")
+        self.assertEqual(pr.python(), paths.shared_python())
+        self.assertTrue(pr.uses_shared())
+        self.assertIn(Path(os.environ["THE_DATA_APP_HOME"]), paths.SHARED_VENV.parents)
+        self.assertNotIn(ROOT, paths.SHARED_VENV.parents)
+        self.assertNotIn(pr.dir, paths.SHARED_VENV.parents)
+
     def test_venv_python_is_not_followed(self):
         """the python of a venv is a link to the base python: resolving it would leave the venv (and pip would then refuse a Homebrew python)"""
         from app import envsetup

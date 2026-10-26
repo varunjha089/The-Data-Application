@@ -8,7 +8,8 @@ committed. The owner's development notes (`PLAN.local.md`, `FUTURE_PLAN.local.md
 
 A desktop application for the scientometric analysis of Scopus CSV exports: clean the export, then generate 37 sheets (tables) in 8 groups, with their plots,
 each from its own readable Python script. It is a small web server on 127.0.0.1 shown in an app window (Chrome/Edge in app mode, else the default browser),
-written with the Python standard library only; the analysis scripts run in a per-project venv with pandas, numpy and matplotlib. Version: `app/__init__.py`.
+written with the Python standard library only; the analysis scripts run in one venv shared by all projects (`paths.SHARED_VENV` = <settings folder>/venv; a project's
+project.json says "python": "shared") with pandas, numpy and matplotlib. Version: `app/__init__.py`.
 
 Work happens in **projects**: a project is a folder the user chooses anywhere, with its own `project.json` (venv, main data, choices, years, plot look), a copy
 of the export in `data/raw/`, `01_Clean_Data/`, and one folder per sheet. The application keeps only the list of projects, text size and theme in the user's
@@ -49,7 +50,8 @@ app/__init__.py           __version__
 app/paths.py              ROOT, STEPS, REQUIREMENTS; APP_DATA / APP_CONFIG / APP_LOG (the user's settings folder)
 app/config.py             atomic JSON read/write, app_config.json, rel()/absolute() for stored paths
 app/project.py            Project (folder, project.json, python(), main_data(), result paths); the list of projects: create, add_existing, forget, find, get
-app/envsetup.py           make or use a venv, check Python and packages (REQUIRED matches requirements.txt), install the missing ones
+app/envsetup.py           make or use a venv, check Python and packages (REQUIRED matches requirements.txt), install the missing ones; never resolve a
+                          venv's python link (it leads to the base python); a system python (EXTERNALLY-MANAGED) gets a plain message, never pip's
 app/dataset.py            validate an export (plain-words reasons: Excel file, WoS/RIS, semicolons, not UTF-8, missing columns), copy + SHA-256
 app/pipeline.py           clean_data, run_sheet, run_plot, run_all: copy steps/... into the project, run with the project's python, log, run_info.json
 app/sheets.py             registry of the sheets: group, title, description, needs, extra CSVs, plots, options (_OPTIONS), per-plot sheets,
@@ -115,7 +117,7 @@ future/                   finished code taken out of the menu (kept for later)
 ## Test
 
 ```sh
-python -m unittest discover -s tests -v              # with a Python that has pandas, numpy, matplotlib (any project's venv): about 2 minutes
+python -m unittest discover -s tests -v              # with a Python that has pandas, numpy, matplotlib (for example the shared venv): about 5 minutes
 TDA_QUICK=1 python3 -m unittest discover -s tests    # only the fast tests (standard library)
 ```
 
@@ -125,7 +127,7 @@ with `--location <scratch>` (the sample project is ideal: `python3 the_data_app.
 - The window without a screen: `python3 the_data_app.py gui --no-window --port 8765` prints a URL with `?key=...`; `curl -c jar "<url>"`, then `curl -b jar .../api/status`;
   `&tab=settings` (or `&tab=sheet:<Sheet>`) starts on a page; headless Chrome `--headless=new --screenshot=out.png --window-size=1300,2400 --virtual-time-budget=6000 "<url>"`.
 - Look at every plot you changed (open the PNG). Check a choice by changing it in the page, not only through the API.
-- Before sharing a version: a fresh clone, a new venv made by the application (`env --create`) on the oldest Python you can find, the full tests.
+- Before sharing a version: a fresh clone, the shared venv made by the application (`env --create`, with a scratch THE_DATA_APP_HOME) on the oldest Python you can find, the full tests.
 
 ## Git and releases
 

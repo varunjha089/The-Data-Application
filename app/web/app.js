@@ -170,10 +170,17 @@ $("ov-plots").onclick = () => runJob("/api/sheets/run_all", { plots: true }, "ov
 function renderSettings() {
   const p = state.project, env = p.env, d = p.data;
   $("project-info").innerHTML = "<b>Name:</b> " + esc(p.name) + "<br><b>Folder:</b> <code>" + esc(p.dir) + "</code><br><b>Created:</b> " + esc(day(p.created));
-  if (env.ok) { pill("env-pill", "ready", "ok"); $("env-info").innerHTML = "<b>In use:</b> <code>" + esc(env.python) + "</code> (" + esc(env.message) + ")"; }
+  if (env.ok) { pill("env-pill", "ready", "ok"); $("env-info").innerHTML = "<b>In use:</b> " + (env.shared ? "the shared venv <code>" + esc(env.shared_dir) + "</code>" : "<code>" + esc(env.python) + "</code>") + " (" + esc(env.message) + ")"; }
   else if (env.configured) { pill("env-pill", env.can_clean ? "packages missing" : "problem", env.can_clean ? "warn" : "bad"); $("env-info").innerHTML = "<b>Saved:</b> <code>" + esc(env.python) + "</code> &mdash; " + esc(env.message); }
-  else { pill("env-pill", "not set up", "warn"); $("env-info").textContent = env.venv_here ? "A venv from an earlier start exists in this project; choose 'Set up' to use it." : ""; }
+  else { pill("env-pill", "not set up", "warn"); $("env-info").textContent = ""; }
   $("env-fix").classList.toggle("hidden", !(env.configured && env.missing && env.missing.length));
+  $("env-own").classList.toggle("hidden", !env.venv_here);         // a project's own .venv from before the shared venv: space that can be freed
+  if (env.venv_here) {
+    $("env-own").innerHTML = env.shared ? "This project still has its own <code>.venv</code> folder (" + env.own_venv_mb + " MB), which it no longer uses. " +
+      '<button id="env-own-del">Delete this project\'s own .venv</button> <span id="env-own-msg" class="msg"></span>'
+      : "This project uses its own <code>.venv</code> (" + env.own_venv_mb + " MB). To save space, choose <b>Use the shared venv</b> below and press <b>Set up the environment</b>; then its own folder can be deleted.";
+    if ($("env-own-del")) $("env-own-del").onclick = async () => { const r = await api("/api/env/remove_own", {}); setMsg("env-msg", r.message, r.ok ? "ok" : "bad"); if (r.ok) refreshAll(); };
+  }
   if (d.chosen && d.exists) {
     pill("data-pill", d.records + " records", "ok");
     $("data-info").innerHTML = "<b>Copy:</b> <code>" + esc(d.file) + "</code><br>copied " + esc(day(d.copied)) + (d.original ? "<br><b>Original:</b> " + esc(d.original) : "");

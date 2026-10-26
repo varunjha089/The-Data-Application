@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import config
-from .paths import default_location
+from .paths import default_location, shared_python
 
 
 def _now():
@@ -24,7 +24,7 @@ class Project:
         self.slug = self.dir.name
         self.config_file = self.dir / "project.json"
         self.raw = self.dir / "data" / "raw"            # copy of the main data
-        self.venv_dir = self.dir / ".venv"              # where "create a new venv" puts it
+        self.venv_dir = self.dir / ".venv"              # a project's own venv (before 1.0: now all projects share paths.SHARED_VENV)
         self.clean = self.dir / "01_Clean_Data"         # results of step 1
         self.clean_file = self.clean / "clean_main_data.csv"
         self.clean_report = self.clean / "clean_report.txt"
@@ -53,10 +53,15 @@ class Project:
 
     def python(self):
         text = self.load().get("python")
+        if text == "shared":                                  # the application's shared venv (paths.SHARED_VENV)
+            return shared_python()
         return config.absolute(text, self.dir) if text else None
 
+    def uses_shared(self):
+        return self.load().get("python") == "shared"
+
     def set_python(self, py):
-        self.update(python=config.rel(py, self.dir))
+        self.update(python="shared" if py is not None and Path(py) == shared_python() else config.rel(py, self.dir))
 
     def rel(self, path):
         return config.rel(path, self.dir)

@@ -93,11 +93,13 @@
 
       <section class="card">
         <div class="head"><h2>Python environment</h2><span id="env-pill" class="pill">checking</span></div>
-        <p>The scripts run in a virtual environment (venv), so nothing is installed into your system Python.</p>
+        <p>The scripts run in a virtual environment (venv), so nothing is installed into your system Python. One shared venv serves every
+           project; it is kept in the application's settings folder, not in a project, so deleting a project never removes it.</p>
         <div id="env-info" class="info"></div>
+        <div id="env-own" class="notice hidden"></div>
         <div class="row"><button id="env-fix" class="primary hidden">Install the missing packages</button></div>
         <div class="choices">
-          <label class="choice"><input type="radio" name="env" value="create" checked> <span><b>Create a new venv</b> inside this project and install the packages <em>(recommended)</em></span></label>
+          <label class="choice"><input type="radio" name="env" value="create" checked> <span><b>Use the shared venv</b> of the application (one for all projects; it is made and filled the first time) <em>(recommended)</em></span></label>
           <label class="choice"><input type="radio" name="env" value="use"> <span><b>Use a venv I already have</b></span></label>
           <div id="use-box" class="row hidden">
             <input type="text" id="venv-path" placeholder="Folder of your venv (it contains pyvenv.cfg)" aria-label="Folder of your venv">

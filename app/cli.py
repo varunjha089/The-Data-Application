@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import __version__, config, dataset, envsetup, pipeline, sample, update, years
 from . import project as projects
-from .paths import ROOT, STEPS
+from .paths import ROOT, STEPS, SHARED_VENV
 
 
 def pick_project(name):
@@ -87,16 +87,16 @@ def cmd_status(pr):
 
 
 def cmd_env(pr, create, venv):
-    """create the project's own venv (--create) or use an existing one (--venv PATH); missing packages are installed"""
+    """use the application's shared venv (--create; made the first time) or an existing one (--venv PATH); missing packages are installed"""
     if create:
-        py = envsetup.venv_python(pr.venv_dir) or envsetup.create_venv(pr.venv_dir)
+        py = envsetup.venv_python(SHARED_VENV) or envsetup.create_venv(SHARED_VENV)
     elif venv:
         py = envsetup.resolve(venv)
         if py is None:
             print("No python found there: give the folder of the venv (it contains pyvenv.cfg and a bin or Scripts folder).")
             return 1
     else:
-        print("Say what to do: --create (a new venv in the project) or --venv PATH (one you have).")
+        print("Say what to do: --create (the shared venv of the application, one for all projects) or --venv PATH (one you have).")
         return 1
     if py is None:
         return 1
@@ -225,7 +225,7 @@ def main(argv=None):
     ad.add_argument("path")
     with_project(sub.add_parser("status", help="show what is set up in a project"))
     e = with_project(sub.add_parser("env", help="create or point to the project's Python venv"))
-    e.add_argument("--create", action="store_true", help="create .venv in the project and install the packages")
+    e.add_argument("--create", action="store_true", help="use the application's shared venv (one for all projects; made the first time) and install the packages")
     e.add_argument("--venv", metavar="PATH", help="use this existing venv (folder or python file)")
     d = with_project(sub.add_parser("data", help="choose the project's main data (a copy is made)"))
     d.add_argument("file", help="the Scopus CSV")

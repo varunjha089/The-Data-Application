@@ -26,6 +26,13 @@ def app_data_dir():
 APP_DATA = app_data_dir()
 APP_CONFIG = APP_DATA / "app_config.json"  # text size, theme, the list of projects, the last project and location
 APP_LOG = APP_DATA / "app.log"             # messages of the application (the macOS launcher writes here)
+SHARED_VENV = APP_DATA / "venv"            # the one Python environment all projects share (outside every project, so deleting a project never removes it;
+                                           # outside the application folder, so updates and their backups never touch it)
+
+
+def shared_python():
+    """the python of the shared venv (it may not exist yet)"""
+    return SHARED_VENV / ("Scripts/python.exe" if os.name == "nt" else "bin/python3")
 
 
 def default_location():

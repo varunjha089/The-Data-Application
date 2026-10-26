@@ -8,6 +8,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import sys
 import threading
 import time
@@ -18,7 +19,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from . import __version__, ai, config, dataset, envsetup, look, native, pipeline, project as projects, report, sample, sheets as sheetlist, update, window, years
 from .jobs import Jobs, stream
-from .paths import REQUIREMENTS, ROOT, STEPS, default_location
+from .paths import REQUIREMENTS, ROOT, SHARED_VENV, STEPS, default_location
 
 WEB = Path(__file__).resolve().parent / "web"
 MIME = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".csv": "text/csv; charset=utf-8",
@@ -57,7 +58,10 @@ class App:
         if pr is None:
             return out
         cfg = pr.load()
-        env = {"configured": False, "python": None, "ok": False, "message": "not set up yet", "missing": [], "can_clean": False, "can_plot": False, "venv_here": envsetup.venv_python(pr.venv_dir) is not None}
+        own = envsetup.venv_python(pr.venv_dir) is not None and (pr.venv_dir / "pyvenv.cfg").exists()
+        env = {"configured": False, "python": None, "ok": False, "message": "not set up yet", "missing": [], "can_clean": False, "can_plot": False,
+               "venv_here": own, "shared": pr.uses_shared(), "shared_dir": str(SHARED_VENV),
+               "own_venv_mb": round(sum(f.stat().st_size for f in pr.venv_dir.rglob("*") if f.is_file() and not f.is_symlink()) / 1048576) if own else 0}
         if cfg.get("python"):
             py = pr.python()
             ok, msg = envsetup.check(py)
@@ -82,17 +86,18 @@ class App:
 
     # ---------------------------------------------------------------- jobs (always for the project that was open when they started)
     def job_setup(self, pr, path_text=None, install=True):
-        """create .venv in the project (path_text None) or use an existing venv; install missing packages; remember it in project.json"""
+        """use the shared venv of the application (path_text None; made the first time) or an existing venv; install missing packages;
+        remember it in project.json"""
         def run(log):
             if path_text is None:
-                py = envsetup.venv_python(pr.venv_dir)
+                py = envsetup.venv_python(SHARED_VENV)
                 if py is None:
-                    log("Creating the virtual environment in the project's .venv ...")
-                    if stream([envsetup.base_python(), "-m", "venv", pr.venv_dir], log) != 0:
+                    log(f"Creating the shared virtual environment (one for all projects) in {SHARED_VENV} ...")
+                    if stream([envsetup.base_python(), "-m", "venv", SHARED_VENV], log) != 0:
                         return False, "Could not create the venv. On Debian/Ubuntu install 'python3-venv' first, or use an existing venv."
-                    py = envsetup.venv_python(pr.venv_dir)
+                    py = envsetup.venv_python(SHARED_VENV)
                 else:
-                    log("A venv already exists in the project's .venv; using it.")
+                    log(f"Using the shared virtual environment in {SHARED_VENV}.")
             else:
                 py = envsetup.resolve(path_text)
                 if py is None:
@@ -510,6 +515,15 @@ def make_handler(app):
                 return self._send(200, {"ok": False, "message": msg})
             if p == "/api/env/install":
                 return self._send(200, {"started": app.job_install(pr)})
+            if p == "/api/env/remove_own":                           # the project's own .venv, once the project uses the shared one
+                if app.busy():
+                    return self._send(200, {"ok": False, "message": "A task is still running: wait until it has finished."})
+                if not pr.uses_shared():
+                    return self._send(200, {"ok": False, "message": "This project still uses its own venv: choose the shared venv first."})
+                if not (pr.venv_dir / "pyvenv.cfg").exists():
+                    return self._send(200, {"ok": False, "message": "There is no venv folder in this project."})
+                shutil.rmtree(pr.venv_dir)
+                return self._send(200, {"ok": True, "message": "The project's own .venv was deleted; the project uses the shared venv."})
             if p == "/api/bookmark":                                 # a coloured star in the menu: {page, color} (color null = remove)
                 page, color = str(body.get("page", ""))[:80], body.get("color")
                 if not page or color not in (None, "red", "green", "violet", "orange"):
