@@ -310,7 +310,8 @@ def table_tex(item, spec):
         d = d[[spec["first"]] + [c for c in d.columns if c != spec["first"]]]
     if d.shape[1] > 13:                                      # a long year table: the first column, the most recent years and the total
         d = d[[d.columns[0]] + list(d.columns[-12:])]
-    d = d.head(int(spec.get("n", 15))).rename(columns=spec.get("rename", {}))
+    rows = int(item.get("rows") or spec.get("n", 15)) if item.get("rows") != 0 else 1000     # the sheet's own number of rows, if you set one
+    d = d.head(rows).rename(columns=spec.get("rename", {}))
     whole = {c for c in d.columns if pd.api.types.is_float_dtype(d[c]) and d[c].dropna().map(float.is_integer).all()}
     text_cols = [not pd.api.types.is_numeric_dtype(d[c]) for c in d.columns]
     colspec = spec.get("spec") or "".join(r">{\raggedright\arraybackslash}X" if t else "r" for t in text_cols)
@@ -380,7 +381,7 @@ def main():
             continue
         ctx = context(it, main_info)
         image = src.read_bytes() if (kind == "fig" and args.images and ask and src.stat().st_size < 4_500_000) else None
-        inputs = sha("\n".join([PROMPT_VERSION, study, spec["about"], ctx, main_info, sha(image) if image else "", sha(src.read_bytes())]))
+        inputs = sha("\n".join([PROMPT_VERSION, study, spec["about"], ctx, main_info, sha(image) if image else "", sha(src.read_bytes()), str(it.get("rows"))]))
         if out.exists() and old and old.get("inputs") == inputs and old.get("model") == model_id and not args.rewrite:
             status[stem] = {"state": "kept", "note": "unchanged", "check": old.get("check", [])}
             print(f"-- {stem}: unchanged, kept")

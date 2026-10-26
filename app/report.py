@@ -232,7 +232,9 @@ def write(pr, log, use_ai=True, rewrite=False):
         return False, "The missing packages could not be installed (internet connection? see Settings)."
     prepare(pr, log)
     f, o, st = folder(pr), options(pr), state(pr)
-    items = [{k: it[k] for k in ("stem", "kind", "sheet", "file", "title", "group", "sheet_title", "what", "csvs")} for it in st["items"] if it["selected"]]
+    own = pr.load().get("table_rows_by_sheet") or {}              # a sheet's own number of rows is also used for its table in the report
+    items = [{**{k: it[k] for k in ("stem", "kind", "sheet", "file", "title", "group", "sheet_title", "what", "csvs")},
+              **({"rows": own[it["sheet"]]} if it["kind"] == "tab" and it["sheet"] in own else {})} for it in st["items"] if it["selected"]]
     (f / "report_items.json").write_text(json.dumps({"project": pr.name, "study": o["study"], "main": o["main"], "items": items}, indent=1), encoding="utf-8")
     s = ai.settings()
     args = ["--provider", "none"]

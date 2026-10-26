@@ -282,6 +282,12 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.9.5 (2026-10-26)
+
+- **Rows in the table pictures: type any number.** Settings has a number box (0 = all rows, at most 1000) instead of the choices
+  20 / 50 / 100 / all, and every sheet page has its own box with **Redraw** next to the table picture (for example 10 rows for
+  *Documents per source*). A sheet's own number also limits its table in the report; "use the project's" goes back to the Settings value.
+
 ## Version 0.9.4 (2026-10-26)
 
 - **A tick box above every plot and table** on the sheet pages puts it in the report or leaves it out, so you can decide while you look

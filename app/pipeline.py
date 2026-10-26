@@ -231,13 +231,13 @@ def _fresh_picture(csv_path):
 
 def make_table_pictures(project, name, log):
     """a PNG and an SVG of every table of the sheet (steps/common/table_image.py, run with the project's python); skipped, never fatal,
-    when matplotlib is not installed yet. The rows drawn are a project setting (look.table_rows)."""
+    when matplotlib is not installed yet. The rows drawn: the sheet's own number or the project's (look.table_rows)."""
     py = project.python()
     if py is None or "matplotlib" in envsetup.missing_packages(py):
         log("(table pictures skipped: the package matplotlib is not installed yet; Settings, Install the missing packages)")
         return
     spec = sheetlist.get(name)
-    rows = str(look.get(project)["table_rows"])
+    rows = str(look.table_rows(project, name))
     yrs = sheetlist.plot_years(project, name)          # the years the sheet's plots draw: the table pictures follow them
     year_args = ["--from-year", str(yrs[0]), "--to-year", str(yrs[1])] if yrs else []
     for c in spec["csvs"]:

@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from datetime import date
 from pathlib import Path
@@ -367,6 +368,16 @@ class Server(unittest.TestCase):
             dt = next(s for s in json.loads(call("/api/sheets")[1])["sheets"] if s["name"] == "Document_Types")
             self.assertFalse(dt["csvs"][0]["report"]["selected"])
             self.assertTrue(json.loads(call("/api/report/tick", {"stem": "tab_Document_Types", "on": True})[1])["selected"])
+            r = json.loads(call("/api/sheet/table_rows", {"name": "09_Pivot", "rows": 12})[1])        # rows in a sheet's table pictures: its own number
+            self.assertEqual(r["rows"], 12)
+            self.assertEqual(look.table_rows(app.project, "09_Pivot"), 12)
+            self.assertEqual(look.table_rows(app.project, "07_Top_Sources"), look.get(app.project)["table_rows"])
+            for _ in range(50):
+                if json.loads(call("/api/job")[1])["state"] != "running":
+                    break
+                time.sleep(0.1)
+            self.assertEqual(json.loads(call("/api/sheet/table_rows", {"name": "09_Pivot", "rows": None})[1])["rows"], look.get(app.project)["table_rows"])
+            self.assertEqual(look.save(app.project, {"table_rows": 7})["table_rows"], 7)                  # any number, not only 20/50/100
             # a file the user chooses for a sheet (the Scopus Source List): the sample project brings a made-up one; wrong types are refused
             sa = next(s for s in sh["sheets"] if s["name"] == "Subject_Areas")
             self.assertEqual(sa["input"]["file"], "sample_source_list.csv")

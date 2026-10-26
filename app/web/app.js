@@ -223,12 +223,12 @@ function renderLook() {
   fill("look-dpi", ch.dpi.map((v) => [v, v ? v + " dpi" : "as each plot chooses (150 dpi)"]), lk.dpi);
   fill("look-palette", Object.entries(ch.palettes), lk.palette);
   $("look-pdf").checked = lk.pdf; $("look-tiff").checked = lk.tiff;
-  fill("look-rows", (ch.table_rows || [20, 50, 100, 0]).map((v) => [v, v ? "first " + v : "all (up to 1000)"]), lk.table_rows);
+  if (document.activeElement !== $("look-rows")) $("look-rows").value = lk.table_rows;
   const changed = lk.text !== 1 || lk.size !== 1 || lk.dpi || lk.pdf || lk.tiff || lk.palette !== "standard";
   pill("look-pill", changed ? "changed" : "standard", changed ? "warn" : "ok");
 }
 for (const id of ["look-text", "look-size", "look-dpi", "look-palette", "look-pdf", "look-tiff", "look-rows"]) $(id).onchange = async () => {
-  const values = { text: Number($("look-text").value), size: Number($("look-size").value), dpi: Number($("look-dpi").value), palette: $("look-palette").value, pdf: $("look-pdf").checked, tiff: $("look-tiff").checked, table_rows: Number($("look-rows").value) };
+  const values = { text: Number($("look-text").value), size: Number($("look-size").value), dpi: Number($("look-dpi").value), palette: $("look-palette").value, pdf: $("look-pdf").checked, tiff: $("look-tiff").checked, table_rows: Math.max(0, Math.min(1000, Math.round(Number($("look-rows").value) || 0))) };
   const r = await api("/api/look", { values });
   state.project.look = r.look; renderLook();
   setMsg("look-msg", id === "look-rows" ? "Saved. Generate the data again to redraw the table pictures." : "Saved. Generate the plots again to see it.", "ok");
@@ -446,6 +446,14 @@ async function loadTable(name) {
   const c = ((spec(name) || {}).csvs || []).find((x) => x.file === curCsv), stem = curCsv.replace(/\.csv$/, "") + "_table";
   $("sh-tablepic").innerHTML = (c && c.report ? '<label class="ref"><input type="checkbox" data-rp="' + esc(c.report.stem) + '"' + (c.report.selected ? " checked" : "") + ' title="Tick to put this in the report"> Table: ' +
     esc(c.report.title) + ' <span class="stem">(report file ' + esc(c.report.stem) + ".tex)</span></label> " : "") + (c && c.picture ? 'Download the table as a picture: <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.png?download=1">PNG</a> <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.svg?download=1">SVG</a>' : "");
+  const sp = spec(name);
+  if (sp && c && c.picture) {
+    $("sh-tablepic").innerHTML += ' &nbsp; <label>Rows in the picture <input type="number" id="sh-rows" min="0" max="1000" step="1" value="' + sp.table_rows + '" style="width:6em"></label>' +
+      ' <button id="sh-rows-go">Redraw</button> <span class="info">(0 = all; ' + (sp.table_rows_own ? 'this sheet\'s own number, <a href="#" id="sh-rows-reset">use the project\'s</a>' : "the project's number from Settings") + ")</span>";
+    $("sh-rows-go").onclick = () => runJob("/api/sheet/table_rows", { name, rows: Math.max(0, Math.min(1000, Math.round(Number($("sh-rows").value) || 0))) }, "sh-msg");
+    $("sh-rows").onkeydown = (e) => { if (e.key === "Enter") $("sh-rows-go").click(); };
+    if ($("sh-rows-reset")) $("sh-rows-reset").onclick = (e) => { e.preventDefault(); runJob("/api/sheet/table_rows", { name, rows: null }, "sh-msg"); };
+  }
   bindTicks();
   if (!t.exists) { $("sh-table").innerHTML = ""; return; }
   $("sh-total").textContent = "(" + t.total + " rows, " + t.columns.length + " columns)";

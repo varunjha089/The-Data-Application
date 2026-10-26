@@ -141,8 +141,9 @@
           <label><input type="checkbox" id="look-tiff"> also save a TIFF (for journals)</label>
         </div>
         <div class="row">
-          <label>Rows in table pictures <select id="look-rows" aria-label="Rows in table pictures"></select></label>
-          <span class="info">Every table is also saved as a PNG and an SVG picture when its data is generated (the CSV always has every row).</span>
+          <label>Rows in table pictures <input type="number" id="look-rows" min="0" max="1000" step="1" style="width:6em" aria-label="Rows in table pictures"></label>
+          <span class="info">0 = all rows (at most 1000). Every table is also saved as a PNG and an SVG picture when its data is generated (the CSV always has every row);
+            a sheet can have its own number on its page.</span>
         </div>
         <div id="look-msg" class="msg"></div>
       </section>

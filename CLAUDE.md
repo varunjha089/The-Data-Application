@@ -31,7 +31,8 @@ settings folder (`app/paths.py`: `APP_DATA`; override with `THE_DATA_APP_HOME`).
 - **Every run is recorded** in its folder: `<Sheet>_log.txt` / `<Sheet>_plot_log.txt` and `run_info.json` (version, script SHA-256, arguments, input SHA-256, choices,
   years, plot look, software). Keep both when changing `pipeline.py`.
 - **Every table also has a picture.** After a sheet's data is made (and after its plot, when the picture is missing, older than the CSV, or the sheet has a
-  year setting), each of its CSVs is drawn as `<table>_table.png` / `.svg` by `steps/common/table_image.py`: the first `look.table_rows` rows, the years the
+  year setting), each of its CSVs is drawn as `<table>_table.png` / `.svg` by `steps/common/table_image.py`: the first `look.table_rows(project, sheet)` rows (the sheet's own number, `table_rows_by_sheet` in project.json, else the project's;
+  0 = all up to 1000; a sheet's own number also limits its table in the report), the years the
   sheet's plots draw (`sheets.plot_years`), cells exactly as in the CSV. A new sheet gets this without any code.
 - **Large, plain text** in the interface (the owner wears spectacles). On macOS edit files with Python or the Edit tool (BSD `sed -i` differs).
 - **Quote paths in the shell**: the folder holding the repository may have a space in its name.
