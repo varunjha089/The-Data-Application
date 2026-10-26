@@ -61,7 +61,7 @@ async function renderWelcome() {
   $("project-list").innerHTML = list.map((p) => {
     if (!p.exists) {
       return '<div class="project"><div class="grow"><div class="title">' + esc(p.name) + ' <em>(folder not found)</em></div><div class="detail">' + esc(p.path) +
-        '</div></div><button data-forget="' + esc(p.path) + '">Remove from list</button></div>';
+        '</div></div><button class="primary" data-relocate="' + esc(p.path) + '">Find the moved folder&hellip;</button> <button data-forget="' + esc(p.path) + '">Remove from list</button></div>';
     }
     const bits = [p.records ? p.records + " records" : "no data yet", p.cleaned ? "cleaned " + day(p.cleaned) : "not cleaned", p.has_python ? "environment set" : "no environment"];
     return '<div class="project"><div class="grow"><div class="title">' + esc(p.name) + (p.path === projectsInfo.last ? " <em>(last opened)</em>" : "") + '</div>' +
@@ -73,6 +73,13 @@ async function renderWelcome() {
     if (r.ok) boot(); else setMsg("open-msg", r.message, "bad");
   });
   document.querySelectorAll("[data-forget]").forEach((b) => b.onclick = async () => { await api("/api/project/forget", { path: b.dataset.forget }); renderWelcome(); });
+  document.querySelectorAll("[data-relocate]").forEach((b) => b.onclick = async () => {      // a moved project: choose its new folder
+    const r = await api("/api/browse", { kind: "folder", title: "existing" });
+    if (!r.path) { if (r.error) setMsg("open-msg", r.error, "warn"); return; }
+    const m = await api("/api/project/relocate", { old: b.dataset.relocate, path: r.path });
+    setMsg("open-msg", m.message, m.ok ? "ok" : "bad");
+    renderWelcome();
+  });
 }
 function showWhere() {
   const name = $("new-name").value.trim(), loc = $("new-loc").value.trim();

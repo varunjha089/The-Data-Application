@@ -473,12 +473,15 @@ def make_handler(app):
             if p == "/api/browse":
                 path, err = native.browse(body.get("kind", "folder"), body.get("title", "venv"))
                 return self._send(200, {"path": path, "error": err})
-            if p in ("/api/project/create", "/api/project/open", "/api/project/add", "/api/project/forget", "/api/project/sample"):
+            if p in ("/api/project/create", "/api/project/open", "/api/project/add", "/api/project/forget", "/api/project/sample", "/api/project/relocate"):
                 if app.busy():
                     return self._send(200, {"ok": False, "message": "A task is still running: wait until it has finished."})
                 if p == "/api/project/forget":                      # off the list only; the folder and its files stay
                     projects.forget(body.get("path", ""))
                     return self._send(200, {"ok": True})
+                if p == "/api/project/relocate":                    # a project folder that was moved: point the list to its new place
+                    moved, err = projects.relocate(body.get("old", ""), body.get("path", ""))
+                    return self._send(200, {"ok": moved is not None, "message": err or f"Found: {moved.name} is now at {moved.dir}."})
                 if p == "/api/project/create":
                     target, err = projects.create(body.get("name", ""), body.get("location", ""))
                 elif p == "/api/project/sample":                   # a project with made-up data, to try the application before having an export

@@ -1,6 +1,7 @@
 """Projects. A project is a folder that the user chooses; in it: project.json (the project's OWN settings: venv, main data, results), data/raw/ (copy of the main data),
 01_Clean_Data/ (results of step 1), and optionally its own .venv. The application remembers the list of projects (app_config.json in the user's settings folder),
 so several projects, in different places, can be opened from the opening screen."""
+import os
 import re
 from datetime import datetime
 from pathlib import Path
@@ -105,6 +106,22 @@ def forget(path):
     if app.get("last_project") == str(Path(path)):
         app.pop("last_project", None)
     config.app_save(app)
+
+
+def relocate(old, new):
+    """a project whose folder was moved: the list points to its new folder (same place in the list); returns (Project, None) or (None, message)"""
+    new_dir = Path(os.path.expanduser(str(new or "").strip())).resolve() if str(new or "").strip() else None
+    if new_dir is None or not is_project_dir(new_dir):
+        return None, "That folder is not a project (it has no project.json). Choose the project's own folder."
+    app = config.app_load()
+    items = [str(new_dir) if p == str(Path(old)) else p for p in app.get("projects", [])]
+    if str(new_dir) not in items:
+        items.append(str(new_dir))
+    app["projects"] = list(dict.fromkeys(items))                 # never twice in the list
+    if app.get("last_project") == str(Path(old)):
+        app["last_project"] = str(new_dir)
+    config.app_save(app)
+    return Project(new_dir), None
 
 
 def is_project_dir(path):

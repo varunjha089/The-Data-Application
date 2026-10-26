@@ -113,6 +113,21 @@ class Validation(unittest.TestCase):
 
 
 class Pieces(unittest.TestCase):
+    def test_moved_project(self):
+        """a project folder that was moved is found again: the list points to the new folder, nothing else changes"""
+        pr = new_project("Moved project test")
+        old = pr.dir
+        new = TMP / "moved_here" / old.name
+        new.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(old), str(new))
+        self.assertFalse(next(p for p in projects.list_projects() if p["path"] == str(old))["exists"])
+        moved, err = projects.relocate(str(old), str(new))
+        self.assertIsNone(err)
+        paths = [p["path"] for p in projects.list_projects()]
+        self.assertIn(str(new.resolve()), paths)
+        self.assertNotIn(str(old), paths)
+        self.assertEqual(projects.relocate(str(new), str(TMP))[0], None)          # a folder without project.json is refused
+
     def test_shared_venv(self):
         """all projects share one venv in the settings folder (never inside a project, never in the application folder)"""
         from app import paths
