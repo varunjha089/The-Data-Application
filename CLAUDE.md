@@ -6,7 +6,7 @@ committed. The owner's development notes (`PLAN.local.md`, `FUTURE_PLAN.local.md
 
 ## What it is
 
-A desktop application for the scientometric analysis of Scopus CSV exports: clean the export, then generate 37 sheets (tables) in 8 groups, with their plots,
+A desktop application for the scientometric analysis of Scopus CSV exports: clean the export, then generate 38 sheets (tables) in 8 groups, with their plots,
 each from its own readable Python script. It is a small web server on 127.0.0.1 shown in an app window (Chrome/Edge in app mode, else the default browser),
 written with the Python standard library only; the analysis scripts run in one venv shared by all projects (`paths.SHARED_VENV` = <settings folder>/venv; a project's
 project.json says "python": "shared") with pandas, numpy and matplotlib. Version: `app/__init__.py`.

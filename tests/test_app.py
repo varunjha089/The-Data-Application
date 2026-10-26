@@ -596,6 +596,11 @@ class FullRun(unittest.TestCase):
             if not (folder / "run_info.json").exists():
                 missing.append(f"{spec['name']}/run_info.json")
         self.assertEqual(missing, [])
+        with open(pr.dir / "Author_Radial" / "Author_Radial.csv", encoding="utf-8-sig") as f:     # authors' countries read from the addresses
+            radial = list(csv.DictReader(f))
+        self.assertEqual(len(radial), 50)
+        self.assertGreater(sum(r["Country"] != "Unknown" for r in radial), 40)
+        self.assertEqual([float(r["Fractional score"]) for r in radial], sorted((float(r["Fractional score"]) for r in radial), reverse=True))
         self.check_report(pr, log)
         long_decimals = []                                          # every number in a sheet's tables has at most 2 decimal places
         for spec in sheets.SHEETS:

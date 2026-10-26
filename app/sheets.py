@@ -49,6 +49,8 @@ _ROWS = [
       ("authors_timeline", "Authors over time: timeline (bubbles)", ["authors_timeline"])]),
     ("15_Lotka", "Authors", "Lotka's law", "How many authors wrote 1, 2, 3 ... papers.", ["Author_Summary"], [("lotka", "Lotka's law", ["lotka"])]),
     ("16_Author_Impact", "Authors", "Author impact", "The 20 authors with the highest h-index.", ["Author_Summary"], [("author_h_index", "Authors by h-index", ["author_h_index"])]),
+    ("Author_Radial", "Authors", "Authors: radial chart", "The leading authors ranked by fractional score (each paper counts 1, shared by its authors) or by publications, with the country they publish from (read from the addresses of their papers), as a radial bar chart: one bar per author, the length is the fractional score, the colour the country.", ["Author_Summary"],
+     [("author_radial", "Radial chart of the leading authors", ["author_radial"])]),
     ("Institution_Bursts", "Affiliations", "Institution bursts", "The institutions with the strongest bursts of publication (CiteSpace-style burst history): table, plot and HTML page.", ["Affiliations"],
      [("institution_bursts", "Institution bursts: strongest bursts of publication", ["institution_bursts"])]),
     ("17_Top_Affiliations", "Affiliations", "Top affiliations", "The most productive institutions, or parent organisations (an institute of the Chinese Academy of Sciences, CNRS, CSIC, Max Planck, ... counted with its parent): see Your choices.", ["Affiliations"], [("top_affiliations", "Top affiliations", ["top_affiliations"])]),
@@ -133,6 +135,11 @@ _OPTIONS["Word_Cloud"] = [
 _OPTIONS["Publishers"] = [
     {"id": "publishers", "label": "Number of publishers with their own treemap (those with the most documents)", "kind": "number", "default": 4, "min": 1, "max": 9, "arg": "--publishers", "for": "plot"},
     {"id": "tiles", "label": "Most sources drawn in one treemap (the others are put together as \"Other sources\")", "kind": "number", "default": 12, "min": 3, "max": 40, "arg": "--tiles", "for": "plot"}]
+_OPTIONS["Author_Radial"] = [
+    {"id": "top", "label": "Number of authors (bars)", "kind": "number", "default": 50, "min": 5, "max": 200, "arg": "--top"},
+    {"id": "rank_by", "label": "Rank the authors by", "kind": "select", "choices": [("frac", "Fractional score"), ("papers", "Number of publications")], "default": "frac", "arg": "--rank-by"},
+    {"id": "background", "label": "Background of the chart", "kind": "select", "choices": [("dark", "Dark"), ("light", "Light (for print)")], "default": "dark", "arg": "--background", "for": "plot"},
+    {"id": "colours", "label": "Countries with their own colour (the others are grey)", "kind": "number", "default": 12, "min": 1, "max": 12, "arg": "--colours", "for": "plot"}]
 _OPTIONS["17_Top_Affiliations"] = [{"id": "by", "label": "Count papers by", "kind": "select", "choices": [("institution", "Institution (each institute on its own)"),
                                     ("parent", "Parent organisation (e.g. the institutes of the Chinese Academy of Sciences together)")], "default": "institution", "arg": "--by"}]
 

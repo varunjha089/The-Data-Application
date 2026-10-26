@@ -99,7 +99,7 @@ Choosing a new file makes the earlier cleaned data "out of date" until you clean
 | Main information | Main information (plot: documents by type), Document types, Languages and Open access (pies), Subject areas (pie and bar chart; needs the Scopus Source List) |
 | Production | Annual production (2 plots: with total citations, and with a log trend line), Average citations per year, Life cycle (plots) |
 | Sources | Top sources (plot), Documents per source, Bradford's law (plot), Publishers (treemaps of the largest publishers' sources), Bradford core: who publishes there (3 plots per kind: countries, authors, institutions; the first is a population pyramid, core papers left and other papers right), Source impact (plot), Sources over time (plot) |
-| Authors | Authors over time (plot), Lotka's law (plot), Author impact (plot) |
+| Authors | Authors over time (plot), Lotka's law (plot), Author impact (plot), Authors: radial chart (plot: one bar per author, length = fractional score, colour = country) |
 | Affiliations | Top affiliations (plot), Affiliations over time (plot) |
 | Countries | Corresponding authors' countries (plot), Countries' production and citations (2 plots), Country collaboration pairs (plot), Country collaboration chord (chord diagram) |
 | Documents | Word cloud of the keywords (plot), Most cited documents (plot) |
@@ -282,6 +282,14 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   `topic_slices.json` in the project folder (written with automatic choices on the first run; format at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`;
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
+
+## Version 0.10.0 (2026-10-26)
+
+- **New sheet: Authors: radial chart** (group Authors), in the style of the "Best Countries" overall-rankings chart: one bar per author
+  around a circle, sorted clockwise by rank; the length is the author's **fractional score** (each paper counts 1, shared by its authors),
+  the colour the **country** the author publishes from (read from the addresses of the papers), and each bar carries the rank, the name,
+  the fractional score and the number of publications. Inside the ring the authors are grouped by rank (1-10, 11-20, ...). Choose how
+  many authors, ranking by fractional score or by publications, a dark or light background, and how many countries get their own colour.
 
 ## Version 0.9.9 (2026-10-26)
 
