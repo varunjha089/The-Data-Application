@@ -37,24 +37,36 @@ def save(project, values):
     return get(project)
 
 
-def table_rows(project, sheet):
-    """rows drawn in the table pictures of a sheet: the sheet's own number (set on its page) or the project's (Settings)"""
-    own = (project.load().get("table_rows_by_sheet") or {}).get(sheet)
-    try:
-        return min(max(int(own), 0), 1000) if own is not None else get(project)["table_rows"]
-    except (TypeError, ValueError):
-        return get(project)["table_rows"]
+def table_rows(project, sheet, csv=None):
+    """rows drawn in a table picture: the picture's own number (set above it on the sheet page), else the sheet's (0.9.5), else the project's (Settings)"""
+    by = project.load().get("table_rows_by_sheet") or {}
+    for key in ([f"{sheet}/{csv}"] if csv else []) + [sheet]:
+        if key in by:
+            try:
+                return min(max(int(by[key]), 0), 1000)
+            except (TypeError, ValueError):
+                break
+    return get(project)["table_rows"]
 
 
-def set_table_rows(project, sheet, rows):
-    """the sheet's own number of rows (None: follow the project's)"""
+def table_rows_own(project, sheet, csv=None):
+    """True when the table picture (or its sheet) has its own number instead of the project's"""
+    by = project.load().get("table_rows_by_sheet") or {}
+    return (csv is not None and f"{sheet}/{csv}" in by) or sheet in by
+
+
+def set_table_rows(project, sheet, rows, csv=None):
+    """the table picture's own number of rows (csv given) or the sheet's; None = follow the project's again"""
     by = dict(project.load().get("table_rows_by_sheet") or {})
+    keys = [f"{sheet}/{csv}"] if csv else [sheet]
     if rows is None:
-        by.pop(sheet, None)
+        keys.append(sheet)                                       # back to the project's number: the sheet's own number goes too
+        for k in keys:
+            by.pop(k, None)
     else:
-        by[sheet] = min(max(int(rows), 0), 1000)
+        by[keys[0]] = min(max(int(rows), 0), 1000)
     project.update(table_rows_by_sheet=by or None)
-    return table_rows(project, sheet)
+    return table_rows(project, sheet, csv)
 
 
 def args(project):

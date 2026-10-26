@@ -11,7 +11,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from . import __version__, ai, config, pipeline, sheets as sheetlist
+from . import __version__, ai, config, look, pipeline, sheets as sheetlist
 from .jobs import stream
 from .paths import STEPS
 
@@ -232,9 +232,10 @@ def write(pr, log, use_ai=True, rewrite=False):
         return False, "The missing packages could not be installed (internet connection? see Settings)."
     prepare(pr, log)
     f, o, st = folder(pr), options(pr), state(pr)
-    own = pr.load().get("table_rows_by_sheet") or {}              # a sheet's own number of rows is also used for its table in the report
+    # a table picture's own number of rows is also used for that table in the report
     items = [{**{k: it[k] for k in ("stem", "kind", "sheet", "file", "title", "group", "sheet_title", "what", "csvs")},
-              **({"rows": own[it["sheet"]]} if it["kind"] == "tab" and it["sheet"] in own else {})} for it in st["items"] if it["selected"]]
+              **({"rows": look.table_rows(pr, it["sheet"], it["file"])} if it["kind"] == "tab" and look.table_rows_own(pr, it["sheet"], it["file"]) else {})}
+             for it in st["items"] if it["selected"]]
     (f / "report_items.json").write_text(json.dumps({"project": pr.name, "study": o["study"], "main": o["main"], "items": items}, indent=1), encoding="utf-8")
     s = ai.settings()
     args = ["--provider", "none"]

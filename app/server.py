@@ -163,13 +163,13 @@ class App:
                 p = pipeline.sheet_csv(pr, spec["name"], c)
                 pic = p.with_name(p.stem + "_table.png")
                 csvs.append({"file": c, "exists": p.exists(), "rows": self.csv_rows(p) if p.exists() else 0, "report": names.get((spec["name"], c)),
+                             "picture_rows": look.table_rows(pr, spec["name"], c), "picture_rows_own": look.table_rows_own(pr, spec["name"], c),
                              "picture": pic.exists() and p.exists() and pic.stat().st_mtime >= p.stat().st_mtime - 5})
             plots = [{"id": p["id"], "title": p["title"], "files": [{**self.plot_file(pr, spec["name"], f), "report": names.get((spec["name"], f))} for f in p["files"]]} for p in spec["plots"]]
             out.append({**{k: spec[k] for k in ("name", "group", "title", "what", "needs")}, **st, "csvs": csvs, "plots": plots,
                         "log": (pr.dir / spec["name"] / f"{spec['name']}_log.txt").exists(),
                         "explain": spec["explain"], "downloads": [{**d, "exists": (pr.dir / spec["name"] / d["file"]).exists()} for d in spec["downloads"]], "options": [{**o, "value": sheetlist.option_values(pr, spec["name"])[o["id"]]} for o in spec["options"]],
                         "plot_years": sheetlist.plot_years(pr, spec["name"]), "run_info": (pr.dir / spec["name"] / "run_info.json").exists(),
-                        "table_rows": look.table_rows(pr, spec["name"]), "table_rows_own": spec["name"] in (pr.load().get("table_rows_by_sheet") or {}),
                         "input": self.input_info(pr, spec)})
         return {"sheets": out, "groups": sheetlist.GROUPS, "clean_ready": pr.clean_file.exists(), "bookmarks": pr.load().get("bookmarks") or {}}
 
@@ -550,19 +550,29 @@ def make_handler(app):
             if p == "/api/report/options":
                 report.save_options(pr, body)
                 return self._send(200, report.state(pr))
-            if p == "/api/sheet/table_rows":                         # rows in the table pictures of one sheet: save, then redraw them
-                name = body.get("name", "")
-                if sheetlist.get(name) is None:
-                    return self._send(400, {"error": "unknown sheet"})
+            if p == "/api/sheet/table_rows":                         # rows in one table picture (or a whole sheet's): save, then redraw
+                name, csv_file = body.get("name", ""), body.get("csv") or None
+                spec = sheetlist.get(name)
+                if spec is None or (csv_file and csv_file not in spec["csvs"]):
+                    return self._send(400, {"error": "unknown sheet or table"})
                 try:
-                    rows = look.set_table_rows(pr, name, None if body.get("rows") in (None, "") else int(body["rows"]))
+                    rows = look.set_table_rows(pr, name, None if body.get("rows") in (None, "") else int(body["rows"]), csv_file)
                 except (TypeError, ValueError):
                     return self._send(200, {"started": False, "message": "Type a whole number (0 = all rows)."})
 
                 def redraw(log):
-                    pipeline.make_table_pictures(pr, name, log)
-                    return True, f"The table pictures now show {'all' if rows == 0 else 'the first ' + str(rows)} rows."
+                    pipeline.make_table_pictures(pr, name, log, only=csv_file)
+                    return True, f"The table picture now shows {'all' if rows == 0 else 'the first ' + str(rows)} rows."
                 return self._send(200, {"started": app.jobs.start("sheet", redraw), "rows": rows})
+            if p == "/api/tables/redraw":                            # every table picture of the project, with its number of rows
+                def redraw_all(log):
+                    n = 0
+                    for spec in sheetlist.SHEETS:
+                        if any(pipeline.sheet_csv(pr, spec["name"], c).exists() for c in spec["csvs"]):
+                            pipeline.make_table_pictures(pr, spec["name"], log)
+                            n += 1
+                    return True, f"The table pictures of {n} sheets were drawn again."
+                return self._send(200, {"started": app.jobs.start("sheet", redraw_all)})
             if p == "/api/report/tick":                              # the tick box above a plot or table on its sheet page
                 return self._send(200, {"selected": report.tick(pr, str(body.get("stem", "")), bool(body.get("on")))})
             if p in ("/api/report/template", "/api/report/default"):

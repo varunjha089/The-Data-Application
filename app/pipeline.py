@@ -229,21 +229,21 @@ def _fresh_picture(csv_path):
     return pic.exists() and pic.stat().st_mtime >= csv_path.stat().st_mtime - 5
 
 
-def make_table_pictures(project, name, log):
+def make_table_pictures(project, name, log, only=None):
     """a PNG and an SVG of every table of the sheet (steps/common/table_image.py, run with the project's python); skipped, never fatal,
-    when matplotlib is not installed yet. The rows drawn: the sheet's own number or the project's (look.table_rows)."""
+    when matplotlib is not installed yet. The rows drawn: the picture's own number, the sheet's, or the project's (look.table_rows); `only` = one CSV."""
     py = project.python()
     if py is None or "matplotlib" in envsetup.missing_packages(py):
         log("(table pictures skipped: the package matplotlib is not installed yet; Settings, Install the missing packages)")
         return
     spec = sheetlist.get(name)
-    rows = str(look.table_rows(project, name))
     yrs = sheetlist.plot_years(project, name)          # the years the sheet's plots draw: the table pictures follow them
     year_args = ["--from-year", str(yrs[0]), "--to-year", str(yrs[1])] if yrs else []
     for c in spec["csvs"]:
         path = sheet_csv(project, name, c)
-        if not path.exists() or not c.endswith(".csv"):
+        if not path.exists() or not c.endswith(".csv") or (only and c != only):
             continue
+        rows = str(look.table_rows(project, name, c))
         title = spec["title"] if c == spec["csvs"][0] else spec["title"] + ": " + c[:-4].split("_", 1)[-1].replace("_", " ")
         stream([py, project.dir / "common" / "table_image.py", path.name, "--rows", rows, "--title", title] + year_args, log, echo=False, cwd=path.parent)
 

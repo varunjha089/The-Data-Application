@@ -378,6 +378,22 @@ class Server(unittest.TestCase):
                 time.sleep(0.1)
             self.assertEqual(json.loads(call("/api/sheet/table_rows", {"name": "09_Pivot", "rows": None})[1])["rows"], look.get(app.project)["table_rows"])
             self.assertEqual(look.save(app.project, {"table_rows": 7})["table_rows"], 7)                  # any number, not only 20/50/100
+            def idle():
+                for _ in range(50):
+                    if json.loads(call("/api/job")[1])["state"] != "running":
+                        return
+                    time.sleep(0.1)
+            idle()
+            r = json.loads(call("/api/sheet/table_rows", {"name": "Bradford_Core", "csv": "Bradford_Core_matrix.csv", "rows": 5})[1])   # one picture's own number
+            self.assertEqual(r["rows"], 5)
+            self.assertEqual(look.table_rows(app.project, "Bradford_Core", "Bradford_Core_matrix.csv"), 5)
+            self.assertEqual(look.table_rows(app.project, "Bradford_Core", "Bradford_Core.csv"), 7)
+            bc = next(s for s in json.loads(call("/api/sheets")[1])["sheets"] if s["name"] == "Bradford_Core")
+            self.assertEqual([(c["file"], c["picture_rows"], c["picture_rows_own"]) for c in bc["csvs"]],
+                             [("Bradford_Core.csv", 7, False), ("Bradford_Core_baseline.csv", 7, False), ("Bradford_Core_matrix.csv", 5, True)])
+            idle()
+            self.assertTrue(json.loads(call("/api/tables/redraw", {})[1])["started"])                    # Settings: redraw every table picture
+            idle()
             # a file the user chooses for a sheet (the Scopus Source List): the sample project brings a made-up one; wrong types are refused
             sa = next(s for s in sh["sheets"] if s["name"] == "Subject_Areas")
             self.assertEqual(sa["input"]["file"], "sample_source_list.csv")

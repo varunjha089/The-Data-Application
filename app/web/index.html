@@ -142,8 +142,9 @@
         </div>
         <div class="row">
           <label>Rows in table pictures <input type="number" id="look-rows" min="0" max="1000" step="1" style="width:6em" aria-label="Rows in table pictures"></label>
-          <span class="info">0 = all rows (at most 1000). Every table is also saved as a PNG and an SVG picture when its data is generated (the CSV always has every row);
-            a sheet can have its own number on its page.</span>
+          <button id="look-redraw">Redraw all table pictures</button>
+          <span class="info">0 = all rows (at most 1000). Every table is also saved as a PNG and an SVG picture (the CSV always has every row);
+            a table picture can have its own number, set above it on its sheet's page.</span>
         </div>
         <div id="look-msg" class="msg"></div>
       </section>

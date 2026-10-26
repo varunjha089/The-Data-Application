@@ -231,7 +231,7 @@ for (const id of ["look-text", "look-size", "look-dpi", "look-palette", "look-pd
   const values = { text: Number($("look-text").value), size: Number($("look-size").value), dpi: Number($("look-dpi").value), palette: $("look-palette").value, pdf: $("look-pdf").checked, tiff: $("look-tiff").checked, table_rows: Math.max(0, Math.min(1000, Math.round(Number($("look-rows").value) || 0))) };
   const r = await api("/api/look", { values });
   state.project.look = r.look; renderLook();
-  setMsg("look-msg", id === "look-rows" ? "Saved. Generate the data again to redraw the table pictures." : "Saved. Generate the plots again to see it.", "ok");
+  setMsg("look-msg", id === "look-rows" ? "Saved. Press Redraw all table pictures to use it now." : "Saved. Generate the plots again to see it.", "ok");
 };
 function envMode() { return document.querySelector("input[name=env]:checked").value; }
 document.querySelectorAll("input[name=env]").forEach((r) => r.onchange = () => {
@@ -277,6 +277,7 @@ $("file").onchange = async () => {
   await refreshAll();
   setBusy(false);
 };
+$("look-redraw").onclick = () => runJob("/api/tables/redraw", {}, "look-msg");
 $("open-raw").onclick = () => api("/api/open", { which: "raw" });
 $("open-project").onclick = () => api("/api/open", { which: "project" });
 
@@ -446,13 +447,12 @@ async function loadTable(name) {
   const c = ((spec(name) || {}).csvs || []).find((x) => x.file === curCsv), stem = curCsv.replace(/\.csv$/, "") + "_table";
   $("sh-tablepic").innerHTML = (c && c.report ? '<label class="ref"><input type="checkbox" data-rp="' + esc(c.report.stem) + '"' + (c.report.selected ? " checked" : "") + ' title="Tick to put this in the report"> Table: ' +
     esc(c.report.title) + ' <span class="stem">(report file ' + esc(c.report.stem) + ".tex)</span></label> " : "") + (c && c.picture ? 'Download the table as a picture: <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.png?download=1">PNG</a> <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.svg?download=1">SVG</a>' : "");
-  const sp = spec(name);
-  if (sp && c && c.picture) {
-    $("sh-tablepic").innerHTML += ' &nbsp; <label>Rows in the picture <input type="number" id="sh-rows" min="0" max="1000" step="1" value="' + sp.table_rows + '" style="width:6em"></label>' +
-      ' <button id="sh-rows-go">Redraw</button> <span class="info">(0 = all; ' + (sp.table_rows_own ? 'this sheet\'s own number, <a href="#" id="sh-rows-reset">use the project\'s</a>' : "the project's number from Settings") + ")</span>";
-    $("sh-rows-go").onclick = () => runJob("/api/sheet/table_rows", { name, rows: Math.max(0, Math.min(1000, Math.round(Number($("sh-rows").value) || 0))) }, "sh-msg");
+  if (c && c.picture) {                                           // this table picture's own number of rows (else the project's, from Settings)
+    $("sh-tablepic").innerHTML += ' &nbsp; <label>Rows in the picture <input type="number" id="sh-rows" min="0" max="1000" step="1" value="' + c.picture_rows + '" style="width:6em"></label>' +
+      ' <button id="sh-rows-go">Redraw</button> <span class="info">(0 = all; ' + (c.picture_rows_own ? 'this table\'s own number, <a href="#" id="sh-rows-reset">use the project\'s</a>' : "the project's number from Settings") + ")</span>";
+    $("sh-rows-go").onclick = () => runJob("/api/sheet/table_rows", { name, csv: curCsv, rows: Math.max(0, Math.min(1000, Math.round(Number($("sh-rows").value) || 0))) }, "sh-msg");
     $("sh-rows").onkeydown = (e) => { if (e.key === "Enter") $("sh-rows-go").click(); };
-    if ($("sh-rows-reset")) $("sh-rows-reset").onclick = (e) => { e.preventDefault(); runJob("/api/sheet/table_rows", { name, rows: null }, "sh-msg"); };
+    if ($("sh-rows-reset")) $("sh-rows-reset").onclick = (e) => { e.preventDefault(); runJob("/api/sheet/table_rows", { name, csv: curCsv, rows: null }, "sh-msg"); };
   }
   bindTicks();
   if (!t.exists) { $("sh-table").innerHTML = ""; return; }
@@ -575,7 +575,7 @@ $("rp-build").onclick = () => runJob("/api/report/build", {}, "rp-msg");
 $("rp-folder").onclick = () => api("/api/open", { which: "report" });
 
 // ---------------------------------------------------------------- jobs (set-up, install, clean, sheets, plots): poll the log while one runs
-const BUSY_BUTTONS = ["env-go", "env-install", "env-fix", "browse", "choose", "clean", "switch", "ov-all", "ov-plots", "sh-run", "rp-write", "rp-write-plain", "rp-build", "rp-tpl", "rp-tpl-default"];
+const BUSY_BUTTONS = ["look-redraw", "env-go", "env-install", "env-fix", "browse", "choose", "clean", "switch", "ov-all", "ov-plots", "sh-run", "rp-write", "rp-write-plain", "rp-build", "rp-tpl", "rp-tpl-default"];
 function setBusy(busy) { for (const id of BUSY_BUTTONS) if ($(id)) $(id).disabled = busy; document.querySelectorAll("#sh-plot-buttons button").forEach((b) => b.disabled = busy); }
 async function runJob(url, body, msgId) {
   setMsg(msgId, "");
