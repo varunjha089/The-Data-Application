@@ -363,8 +363,8 @@ def main():
     for it in items:
         stem, kind = it["stem"], it["kind"]
         spec = about.get(("plot:" + it["file"]) if kind == "fig" else ("table:" + it["file"]))
-        if spec is None:
-            spec = {"title": it.get("title", stem), "about": it.get("what", "")}
+        if spec is None:                                     # a table without its own paragraph in about.json: the application's general one
+            spec = {"title": it.get("title", stem), "about": it.get("about") or it.get("what", "")}
         src = PROJECT / it["sheet"] / (f"{it['file']}.png" if kind == "fig" else it["file"])
         out = RESULTS / f"{stem}.tex"
         if not src.exists():

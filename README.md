@@ -283,6 +283,13 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.10.2 (2026-10-26)
+
+- **Every table can go into the report:** each table picture (Author summary, Affiliations, ...) has its tick box now; tables without
+  their own first paragraph get a general one. Author summary has its own.
+- **Write with AI (or without) also builds the PDF** when LaTeX is installed, so one click gives the finished report; the grey
+  *Build the PDF* button says why it is grey (write the report first).
+
 ## Version 0.10.1 (2026-10-26)
 
 - **A project folder you moved is found again in one click:** a project shown as *folder not found* now has **Find the moved folder...**;

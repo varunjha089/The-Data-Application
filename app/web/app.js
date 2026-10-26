@@ -543,7 +543,8 @@ async function renderReport() {
   $("rp-write").title = ready ? "" : "Add an API key and choose a model in Settings, AI writing";
   $("rp-write-plain").disabled = !n || !!polling;
   $("rp-build").disabled = !rp.main_exists || !rp.tex || !!polling;
-  $("rp-build").title = rp.tex ? "" : "No LaTeX on this computer: install MacTeX, MiKTeX or TeX Live, or upload the Report folder to Overleaf";
+  $("rp-build").title = !rp.tex ? "No LaTeX on this computer: install MacTeX, MiKTeX or TeX Live, or upload the Report folder to Overleaf"
+    : (!rp.main_exists ? "Write the report first (Write with AI or Write without AI); writing also builds the PDF" : "");
   $("rp-pdf").classList.toggle("hidden", !rp.pdf);
   $("rp-pdf").href = "/files/Report/" + encodeURIComponent(rp.options.main.replace(/\.tex$/, ".pdf")) + "?download=1";
   $("rp-check").classList.toggle("hidden", !rp.check_file);

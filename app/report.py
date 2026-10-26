@@ -47,9 +47,13 @@ def catalog(pr):
                 out.append({**base, "stem": "fig_" + f, "kind": "fig", "file": f, "title": a.get("title") or p["title"],
                             "exists": (pr.dir / s["name"] / (f + ".png")).exists()})
         for c in s["csvs"]:
-            a = about.get("table:" + c)
-            if a:
-                out.append({**base, "stem": "tab_" + c[:-4], "kind": "tab", "file": c, "title": a["title"], "exists": (pr.dir / s["name"] / c).exists()})
+            if not c.endswith(".csv"):
+                continue
+            a = about.get("table:" + c)                          # every table can go into the report; the ones without their own paragraph get a general one
+            title = a["title"] if a else (s["title"] if c == s["csvs"][0] else s["title"] + ": " + c[:-4].split("_", 1)[-1].replace("_", " "))
+            out.append({**base, "stem": "tab_" + c[:-4], "kind": "tab", "file": c, "title": title, "exists": (pr.dir / s["name"] / c).exists(),
+                        "documented": bool(a), "about": None if a else (f"This table comes from the sheet {s['title']}: {s['what']} Its limitation is "
+                                                                       "that the report shows only its first rows; the complete table is the sheet's CSV file.")})
     return out
 
 
@@ -82,8 +86,8 @@ def state(pr):
             it["file_state"], it["note"] = "new", "not written yet" if it["exists"] else "plot or table not generated yet"
         it["check"] = (m or {}).get("check", []) if tex.exists() else []
         it["failed"] = (st.get(it["stem"]) or {}).get("note") if (st.get(it["stem"]) or {}).get("state") == "failed" else None
-    if chosen is None:                                       # first visit: everything that exists, except what was deleted
-        chosen = [it["stem"] for it in items if it["exists"] and it["stem"] not in deleted]
+    if chosen is None:                                       # first visit: every plot and documented table that exists, except what was deleted
+        chosen = [it["stem"] for it in items if it["exists"] and it["stem"] not in deleted and it.get("documented", True)]
     elif any(s in chosen for s in deleted):
         chosen = [s for s in chosen if s not in deleted]
         pr.update(report={**o, "items": chosen})
@@ -233,7 +237,7 @@ def write(pr, log, use_ai=True, rewrite=False):
     prepare(pr, log)
     f, o, st = folder(pr), options(pr), state(pr)
     # a table picture's own number of rows is also used for that table in the report
-    items = [{**{k: it[k] for k in ("stem", "kind", "sheet", "file", "title", "group", "sheet_title", "what", "csvs")},
+    items = [{**{k: it[k] for k in ("stem", "kind", "sheet", "file", "title", "group", "sheet_title", "what", "csvs")}, **({"about": it["about"]} if it.get("about") else {}),
               **({"rows": look.table_rows(pr, it["sheet"], it["file"])} if it["kind"] == "tab" and look.table_rows_own(pr, it["sheet"], it["file"]) else {})}
              for it in st["items"] if it["selected"]]
     (f / "report_items.json").write_text(json.dumps({"project": pr.name, "study": o["study"], "main": o["main"], "items": items}, indent=1), encoding="utf-8")
@@ -264,7 +268,11 @@ def write(pr, log, use_ai=True, rewrite=False):
                                           "script": "make_report.py", "script_sha256": pipeline._sha(SRC / "make_report.py"), "command": " ".join(["make_report.py"] + args),
                                           "items": len(items), "template": o["template"], "main": o["main"]})
     if code == 0:
-        return True, "The report is written in the project's folder Report. Build the PDF, or open the folder."
+        if tex_tool("latexmk") or tex_tool("pdflatex"):            # write and build in one go
+            log("--- building the PDF")
+            ok, msg = build(pr, log)
+            return ok, "The report is written and " + (msg[0].lower() + msg[1:] if ok else "the PDF could not be built: " + msg)
+        return True, "The report is written in the project's folder Report (no LaTeX on this computer to build the PDF: upload the folder to Overleaf)."
     if code == 1:
         return False, "Some items failed (see the Activity box); the others are written. Press Write again to retry the failed ones."
     stop = next((l for l in reversed(lines) if l.startswith(("STOPPED", "SKIPPED"))), "")
