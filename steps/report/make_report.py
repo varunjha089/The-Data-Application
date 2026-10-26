@@ -180,6 +180,9 @@ def call(fn, *a):
             msg = e.read().decode("utf-8", "replace")[:600]
             if e.code in (401, 403) or (e.code == 400 and "API key" in msg):
                 raise Fatal("The API key was refused (HTTP %d). Check the key in Settings, AI writing." % e.code)
+            if e.code == 402 or any(w in msg.lower() for w in ("credit balance", "billing", "insufficient_quota", "exceeded your current quota")):
+                raise Fatal("The provider refused for lack of credit or quota on your account (nothing was charged). Add credit (Anthropic: console.anthropic.com, "
+                            "Plans & Billing; Google: AI Studio billing), then press Write with AI again.")
             if e.code == 404:
                 raise Fatal("The model was not found (HTTP 404). Choose another model in Settings, AI writing. " + msg[:200])
             if e.code in (408, 409, 429, 500, 502, 503, 504, 529) and attempt < 4:

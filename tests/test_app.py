@@ -249,6 +249,7 @@ class FakeAI:
     """a stand-in for the Anthropic API on 127.0.0.1: lists one model and answers every report item with JSON (one invented number in it)"""
     def __init__(self):
         self.requests = []
+        self.broke = False
         fake = self
 
         class H(http.server.BaseHTTPRequestHandler):
@@ -269,6 +270,13 @@ class FakeAI:
             def do_POST(self):
                 req = json.loads(self.rfile.read(int(self.headers["Content-Length"])).decode("utf-8"))
                 fake.requests.append({"headers": {k.lower(): v for k, v in self.headers.items()}, "body": req})
+                if fake.broke:                                       # an account without credit: the API answers 400 for every request
+                    body = json.dumps({"type": "error", "error": {"type": "invalid_request_error", "message": "Your credit balance is too low to access the Anthropic API."}}).encode()
+                    self.send_response(400)
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
                 text = req["messages"][0]["content"][-1]["text"]
                 n = re.search(r"Documents,(\d+)", text)
                 answer = {"analysis": f"FAKE ANALYSIS: the data set holds {n.group(1) if n else 0} documents [REF]; *Remote Sensing* leads with 5% & more, and 98765.43 is invented.",
@@ -570,6 +578,13 @@ class FullRun(unittest.TestCase):
         ok, msg = report.write(pr, log.append, use_ai=True)                 # nothing changed: the model is not asked again
         self.assertTrue(ok, msg)
         self.assertEqual(len(fake.requests), n)
+        fake.broke = True                                                   # no credit: the run stops at the first item, with a plain message
+        n = len(fake.requests)
+        ok, msg = report.write(pr, log.append, use_ai=True, rewrite=True)
+        self.assertFalse(ok)
+        self.assertIn("lack of credit", msg)
+        self.assertEqual(len(fake.requests), n + 1)
+        fake.broke = False
         tpl = TMP / "template"                                              # a template of the user's: packages and the results chapter are added
         tpl.mkdir(exist_ok=True)
         (tpl / "thesis.tex").write_text("\\documentclass{report}\n\\begin{document}\nMy thesis.\n\\end{document}\n", encoding="utf-8")

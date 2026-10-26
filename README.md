@@ -283,6 +283,12 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.10.3 (2026-10-26)
+
+- **Report: an account without credit stops the run at once** with a plain message (where to add credit; nothing is charged)
+  instead of failing every item one by one. The message after writing reads correctly.
+- Clearer names for the extra tables of a sheet in the report (for example *Topic slices and gap audit: top cited*).
+
 ## Version 0.10.2 (2026-10-26)
 
 - **Every table can go into the report:** each table picture (Author summary, Affiliations, ...) has its tick box now; tables without

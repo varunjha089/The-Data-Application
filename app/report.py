@@ -50,7 +50,8 @@ def catalog(pr):
             if not c.endswith(".csv"):
                 continue
             a = about.get("table:" + c)                          # every table can go into the report; the ones without their own paragraph get a general one
-            title = a["title"] if a else (s["title"] if c == s["csvs"][0] else s["title"] + ": " + c[:-4].split("_", 1)[-1].replace("_", " "))
+            part = c[len(s["name"]) + 1:-4] if c.startswith(s["name"] + "_") else c[:-4].split("_", 1)[-1]          # Topic_Slices_top_cited.csv -> "top cited"
+            title = a["title"] if a else (s["title"] if c == s["csvs"][0] else s["title"] + ": " + part.replace("_", " "))
             out.append({**base, "stem": "tab_" + c[:-4], "kind": "tab", "file": c, "title": title, "exists": (pr.dir / s["name"] / c).exists(),
                         "documented": bool(a), "about": None if a else (f"This table comes from the sheet {s['title']}: {s['what']} Its limitation is "
                                                                        "that the report shows only its first rows; the complete table is the sheet's CSV file.")})
@@ -271,7 +272,7 @@ def write(pr, log, use_ai=True, rewrite=False):
         if tex_tool("latexmk") or tex_tool("pdflatex"):            # write and build in one go
             log("--- building the PDF")
             ok, msg = build(pr, log)
-            return ok, "The report is written and " + (msg[0].lower() + msg[1:] if ok else "the PDF could not be built: " + msg)
+            return ok, "The report is written. " + (msg if ok else "The PDF could not be built: " + msg)
         return True, "The report is written in the project's folder Report (no LaTeX on this computer to build the PDF: upload the folder to Overleaf)."
     if code == 1:
         return False, "Some items failed (see the Activity box); the others are written. Press Write again to retry the failed ones."
