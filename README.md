@@ -282,6 +282,12 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.9.7 (2026-10-26)
+
+- **No title at the top of the plot pictures** (a report or paper gives each figure its own caption). The title is written in the plot's
+  log instead (`title of <picture> (not drawn in the picture): ...`). Pictures with several panels keep their panel labels, such as
+  "(a) MDPI". Settings, *Look of the plots*, has a tick box to draw the titles again. Generate the plots again to update the pictures.
+
 ## Version 0.9.6 (2026-10-26)
 
 - **Rows in each table picture.** The number of rows is now set for the project (Settings, *Rows in table pictures*) and, if you

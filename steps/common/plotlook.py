@@ -1,6 +1,6 @@
 """common/plotlook.py : run a plot script with another look, without changing the script or its data.
 
-    python ../common/plotlook.py [--text 1.3] [--size 1.2] [--dpi 300] [--formats pdf,tiff] [--palette colourblind] <Sheet>_plot.py [the script's own arguments]
+    python ../common/plotlook.py [--text 1.3] [--size 1.2] [--dpi 300] [--formats pdf,tiff] [--palette colourblind] [--no-titles] <Sheet>_plot.py [the script's own arguments]
 
 The application uses it when the project's plot settings (Settings, "Look of the plots") differ from the defaults; without it a plot script draws with its own look.
   --text      multiplies every font size of the picture (titles, labels, tick labels, legends, annotations)
@@ -9,6 +9,8 @@ The application uses it when the project's plot settings (Settings, "Look of the
   --formats   also writes a PDF and/or a TIFF next to every PNG the script writes (same name)
   --palette   colourblind: the plot colours are swapped for the Okabe-Ito palette, which people with any common colour-vision deficiency can tell apart
               (sequential colour maps such as Blues and viridis are already safe and stay as they are)
+  --no-titles the title at the top of the picture is not drawn but printed (so it goes to the plot's log): the figure's title, and the title of the
+              chart when the picture has one titled chart; the panel labels of a picture with several titled panels stay (a report puts its own caption)
 It works by wrapping matplotlib's Figure.savefig: just before a picture is saved, its texts, size and colours are changed. Needs matplotlib.
 """
 import argparse
@@ -43,6 +45,7 @@ def parse(argv):
     ap.add_argument("--dpi", type=int, default=0)
     ap.add_argument("--formats", default="")
     ap.add_argument("--palette", choices=["standard", "colourblind"], default="standard")
+    ap.add_argument("--no-titles", action="store_true")
     return ap.parse_args(argv[:i]), argv[i], argv[i + 1:]
 
 
@@ -78,6 +81,21 @@ def recolour(fig):
                     put(new)
 
 
+def remove_titles(fig):
+    """take the top title off the picture (figure title; the chart's title when only one chart has one) and return the texts removed"""
+    out = []
+    st = getattr(fig, "_suptitle", None)
+    if st is not None and st.get_text().strip():
+        out.append(st.get_text())
+        st.set_text("")
+    titled = [(ax, loc) for ax in fig.axes for loc in ("center", "left", "right") if ax.get_title(loc).strip()]
+    if len({id(ax) for ax, _ in titled}) == 1:              # several titled charts: those are panel labels such as "(a) MDPI", kept
+        for ax, loc in titled:
+            out.append(ax.get_title(loc))
+            ax.set_title("", loc=loc)
+    return out
+
+
 def bigger_text(fig, k):
     for t in fig.findobj(Text):
         t.set_fontsize(t.get_fontsize() * k)
@@ -97,6 +115,9 @@ def main(argv):
 
     def savefig(fig, fname, *a, **kw):
         if not getattr(fig, "_plotlook_done", False):           # a script saves the same picture as PNG and SVG: change it only once
+            if look.no_titles:
+                for t in remove_titles(fig):
+                    print(f"title of {Path(str(fname)).stem} (not drawn in the picture): {' '.join(t.split())}")
             if look.palette == "colourblind":
                 recolour(fig)
             if look.text != 1.0:

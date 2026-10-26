@@ -55,7 +55,8 @@ app/pipeline.py           clean_data, run_sheet, run_plot, run_all: copy steps/.
 app/sheets.py             registry of the sheets: group, title, description, needs, extra CSVs, plots, options (_OPTIONS), per-plot sheets,
                           a file the user chooses (_INPUTS; input_file = the newest one)
 app/years.py              the project's years in the plots: presets last10 / last5 / all / custom, resolved once and SAVED; roll_forward
-app/look.py               the project's plot look -> arguments of steps/common/plotlook.py; table_rows = rows in table pictures
+app/look.py               the project's plot look -> arguments of steps/common/plotlook.py (always --no-titles unless titles are on: the top title is
+                          printed to the plot's log instead of drawn); table_rows = rows in table pictures
 app/ai.py                 AI writing: provider + model per provider (app_config.json "ai", never the key), API keys (macOS Keychain via `security -i` on
                           stdin; elsewhere or with THE_DATA_APP_HOME: <settings>/ai_keys.json, mode 600; env ANTHROPIC_API_KEY / GEMINI_API_KEY), model lists
 app/report.py             the Report page: catalog of figures/tables (sheets + steps/report/about.json), selection in project.json "report", file states

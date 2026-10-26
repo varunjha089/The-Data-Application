@@ -115,11 +115,15 @@ class Validation(unittest.TestCase):
 class Pieces(unittest.TestCase):
     def test_look(self):
         pr = new_project("Look test")
-        self.assertEqual(look.args(pr), [])                                # the defaults: the plot script runs on its own
+        self.assertEqual(look.args(pr), ["--no-titles"])                   # the defaults: no title at the top of the plots (it goes to the plot's log)
+        look.save(pr, {"titles": True})
+        self.assertEqual(look.args(pr), [])                                # titles on and the rest default: the plot script runs on its own
         look.save(pr, {"text": 9, "palette": "colourblind", "pdf": True, "dpi": 123})
         lk = look.get(pr)
         self.assertEqual((lk["text"], lk["dpi"], lk["palette"]), (2.5, 0, "colourblind"))      # clipped and checked
         self.assertEqual(look.args(pr), ["--text", "2.5", "--formats", "pdf", "--palette", "colourblind"])
+        look.save(pr, {"titles": False})
+        self.assertEqual(look.args(pr)[-1], "--no-titles")
 
     def test_explain_failure(self):
         msg = pipeline.explain_failure(["Traceback (most recent call last):", "  File x", "KeyError: 'Affiliations'"])
@@ -598,6 +602,8 @@ class FullRun(unittest.TestCase):
         look.save(pr, {"text": 1.3, "palette": "colourblind", "pdf": True, "tiff": True, "dpi": 300})
         ok, msg = pipeline.run_plot(pr, "03_Annual_Production", "annual_production", log.append)
         self.assertTrue(ok, msg + "\n" + "\n".join(log[-20:]))
+        self.assertIn("title of annual_production (not drawn in the picture): Annual scientific production",
+                      (pr.dir / "03_Annual_Production" / "03_Annual_Production_plot_log.txt").read_text(encoding="utf-8"))
         for ext in ("png", "svg", "pdf", "tif"):
             self.assertTrue((pr.dir / "03_Annual_Production" / f"annual_production.{ext}").exists(), ext)
         # counting by parent organisation

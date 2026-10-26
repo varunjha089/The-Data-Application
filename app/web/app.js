@@ -222,13 +222,13 @@ function renderLook() {
   fill("look-size", sizes.map((v) => [v, pct(v) + (v === 1 ? " (normal)" : "")]), lk.size);
   fill("look-dpi", ch.dpi.map((v) => [v, v ? v + " dpi" : "as each plot chooses (150 dpi)"]), lk.dpi);
   fill("look-palette", Object.entries(ch.palettes), lk.palette);
-  $("look-pdf").checked = lk.pdf; $("look-tiff").checked = lk.tiff;
+  $("look-pdf").checked = lk.pdf; $("look-tiff").checked = lk.tiff; $("look-titles").checked = !!lk.titles;
   if (document.activeElement !== $("look-rows")) $("look-rows").value = lk.table_rows;
   const changed = lk.text !== 1 || lk.size !== 1 || lk.dpi || lk.pdf || lk.tiff || lk.palette !== "standard";
   pill("look-pill", changed ? "changed" : "standard", changed ? "warn" : "ok");
 }
-for (const id of ["look-text", "look-size", "look-dpi", "look-palette", "look-pdf", "look-tiff", "look-rows"]) $(id).onchange = async () => {
-  const values = { text: Number($("look-text").value), size: Number($("look-size").value), dpi: Number($("look-dpi").value), palette: $("look-palette").value, pdf: $("look-pdf").checked, tiff: $("look-tiff").checked, table_rows: Math.max(0, Math.min(1000, Math.round(Number($("look-rows").value) || 0))) };
+for (const id of ["look-text", "look-size", "look-dpi", "look-palette", "look-pdf", "look-tiff", "look-rows", "look-titles"]) $(id).onchange = async () => {
+  const values = { text: Number($("look-text").value), size: Number($("look-size").value), dpi: Number($("look-dpi").value), palette: $("look-palette").value, pdf: $("look-pdf").checked, tiff: $("look-tiff").checked, titles: $("look-titles").checked, table_rows: Math.max(0, Math.min(1000, Math.round(Number($("look-rows").value) || 0))) };
   const r = await api("/api/look", { values });
   state.project.look = r.look; renderLook();
   setMsg("look-msg", id === "look-rows" ? "Saved. Press Redraw all table pictures to use it now." : "Saved. Generate the plots again to see it.", "ok");

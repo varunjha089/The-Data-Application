@@ -2,7 +2,7 @@
 Saved in project.json as "plot_look". With the defaults the plot scripts run as they are; otherwise the application runs them through
 steps/common/plotlook.py, which changes only the look (never the data) and is copied into the project so the command in the log can be run again."""
 
-DEFAULT = {"text": 1.0, "size": 1.0, "dpi": 0, "pdf": False, "tiff": False, "palette": "standard", "table_rows": 50}
+DEFAULT = {"text": 1.0, "size": 1.0, "dpi": 0, "pdf": False, "tiff": False, "palette": "standard", "table_rows": 50, "titles": False}
 TABLE_ROWS = (20, 50, 100, 0)              # suggested rows in a table picture; any number from 0 (= all, at most 1000) to 1000 is accepted
 LIMITS = {"text": (0.6, 2.5), "size": (0.6, 2.5)}
 DPI = (0, 150, 300, 600)                       # 0 = as the script chooses (150, the Bradford plot 300)
@@ -23,6 +23,7 @@ def get(project):
     except (TypeError, ValueError):
         pass
     out["pdf"], out["tiff"] = bool(saved.get("pdf")), bool(saved.get("tiff"))
+    out["titles"] = bool(saved.get("titles", False))          # a title at the top of the plot pictures (default: no, it goes to the plot's log)
     out["palette"] = saved.get("palette") if saved.get("palette") in PALETTES else "standard"
     try:
         out["table_rows"] = min(max(int(saved.get("table_rows", 50)), 0), 1000)
@@ -70,7 +71,7 @@ def set_table_rows(project, sheet, rows, csv=None):
 
 
 def args(project):
-    """the arguments of steps/common/plotlook.py, or [] when the look is the default (the script then runs on its own)"""
+    """the arguments of steps/common/plotlook.py, or [] when the script can run on its own (only when titles are on and the rest is the default)"""
     lk = get(project)
     out = []
     if lk["text"] != 1.0:
@@ -84,4 +85,6 @@ def args(project):
         out += ["--formats", ",".join(formats)]
     if lk["palette"] != "standard":
         out += ["--palette", lk["palette"]]
+    if not lk["titles"]:
+        out += ["--no-titles"]
     return out
