@@ -26,8 +26,8 @@ def resolve(text):
     text = text.strip().strip("'\"")
     if os.name != "nt":
         text = text.replace("\\ ", " ")                       # a path dragged into a terminal has "\ " for spaces
-    p = Path(os.path.expanduser(text)).resolve()
-    if p.is_file():
+    p = Path(os.path.abspath(os.path.expanduser(text)))       # never .resolve(): a venv's python3 is a link to the base python, and following it
+    if p.is_file():                                           # would leave the venv (packages would then go to the system's python)
         return p
     if p.is_dir():
         found = venv_python(p)                                # the venv folder (also a conda environment folder)
@@ -63,11 +63,25 @@ def missing_packages(py):
     return out
 
 
+EXTERNALLY_MANAGED = ("This Python belongs to the system (it is managed by Homebrew or the operating system), so packages cannot be installed "
+                      "into it. In Settings choose 'Create a new venv inside this project', or a venv folder (one that contains pyvenv.cfg).")
+
+
+def cannot_install(py):
+    """a plain message when packages cannot be installed into this python (a system python marked EXTERNALLY-MANAGED, PEP 668); None when they can"""
+    r = _run(py, "import os,sys,sysconfig;print(sys.prefix == sys.base_prefix and os.path.exists(os.path.join(sysconfig.get_path('stdlib'), 'EXTERNALLY-MANAGED')))")
+    return EXTERNALLY_MANAGED if r.returncode == 0 and r.stdout.strip() == "True" else None
+
+
 def install_missing(py, say=print):
     """install the missing packages of REQUIRED (only those) into this python; returns True when nothing is missing afterwards"""
     missing = missing_packages(py)
     if not missing:
         return True
+    stop = cannot_install(py)
+    if stop:
+        say(stop)
+        return False
     say("Installing the missing packages: " + ", ".join(missing) + " (this can take a minute; an internet connection is needed)")
     pip_cmd = [str(py), "-m", "pip", "install", "--disable-pip-version-check"] + missing
     r = subprocess.run(pip_cmd, capture_output=True, text=True)

@@ -113,6 +113,18 @@ class Validation(unittest.TestCase):
 
 
 class Pieces(unittest.TestCase):
+    def test_venv_python_is_not_followed(self):
+        """the python of a venv is a link to the base python: resolving it would leave the venv (and pip would then refuse a Homebrew python)"""
+        from app import envsetup
+        v = TMP / "linkvenv"
+        (v / "bin").mkdir(parents=True, exist_ok=True)
+        (v / "pyvenv.cfg").write_text("home = x\n", encoding="utf-8")
+        link = v / "bin" / "python3"
+        if not link.exists():
+            os.symlink(sys.executable, link)
+        for given in (str(link), str(v), str(v / "bin")):
+            self.assertEqual(envsetup.resolve(given), link, given)
+
     def test_look(self):
         pr = new_project("Look test")
         self.assertEqual(look.args(pr), ["--no-titles"])                   # the defaults: no title at the top of the plots (it goes to the plot's log)

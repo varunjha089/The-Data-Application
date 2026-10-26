@@ -282,6 +282,13 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.9.8 (2026-10-26)
+
+- **Fix: using a venv you already have.** The application followed the link inside the venv (`bin/python3`) to the system's Python, so
+  the packages were installed into Homebrew's Python, which refuses that ("externally-managed-environment"). The venv's own Python is
+  used now. If a system Python is ever chosen, the application says so plainly and points to *Create a new venv* instead of showing
+  pip's error.
+
 ## Version 0.9.7 (2026-10-26)
 
 - **No title at the top of the plot pictures** (a report or paper gives each figure its own caption). The title is written in the plot's

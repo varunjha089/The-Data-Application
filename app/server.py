@@ -99,6 +99,8 @@ class App:
                     return False, "No python found there. The folder should contain pyvenv.cfg and a bin (Scripts on Windows) folder."
             ok, msg = envsetup.check(py)
             if not ok and msg.startswith("missing packages") and install:
+                if envsetup.cannot_install(py):
+                    return False, envsetup.cannot_install(py)
                 log("Installing the packages from requirements.txt (this can take a minute) ...")
                 if stream([py, "-m", "pip", "install", "--disable-pip-version-check", "-r", REQUIREMENTS], log) != 0:
                     return False, ("The installation failed. Is there an internet connection? If your Python is very new, a package may not exist "
@@ -119,6 +121,8 @@ class App:
             py = pr.python()
             if py is None or not py.exists():
                 return False, "The Python environment is not set up yet."
+            if envsetup.cannot_install(py):
+                return False, envsetup.cannot_install(py)
             log("Installing the packages from requirements.txt (this can take a minute) ...")
             if stream([py, "-m", "pip", "install", "--disable-pip-version-check", "-r", REQUIREMENTS], log) != 0:
                 return False, "The installation failed. Is there an internet connection?"
@@ -498,6 +502,8 @@ def make_handler(app):
                     pr.set_python(py)
                     return self._send(200, {"ok": True, "message": "Environment ready: " + msg})
                 if msg.startswith("missing packages"):
+                    if envsetup.cannot_install(py):
+                        return self._send(200, {"ok": False, "message": envsetup.cannot_install(py)})
                     if body.get("install"):
                         return self._send(200, {"started": app.job_setup(pr, text, True)})
                     return self._send(200, {"ok": False, "needs_install": True, "message": "This venv is missing packages (" + msg.split(": ", 1)[1] + ")."})
