@@ -96,6 +96,11 @@ select { font: inherit; color: var(--ink); background: var(--card); border: 2px 
 .plot .ref, #sh-tablepic .ref { font-weight: 700; font-size: 1.05rem; margin-bottom: .4rem; color: #1a1a1a; }
 #sh-tablepic .ref { color: var(--ink); display: block; margin-bottom: .3rem; }
 .ref .stem { font-weight: 400; font-size: .85rem; color: #666; }
+#sh-tablepic .ref .stem { color: var(--muted); }
+.ref { display: flex; align-items: center; gap: .5rem; cursor: pointer; }
+.ref input { transform: scale(1.4); margin: 0 .3rem 0 .2rem; }
+#rp-items a, #rp-items a:visited { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+#rp-items a:hover { color: var(--accent); }
 .plot a { margin-right: .8rem; }
 .pager button { padding: .25rem .8rem; }
 .tabbtn.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }

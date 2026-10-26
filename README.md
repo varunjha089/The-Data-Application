@@ -282,6 +282,12 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.9.4 (2026-10-26)
+
+- **A tick box above every plot and table** on the sheet pages puts it in the report or leaves it out, so you can decide while you look
+  at it; it is the same choice as the list on the Report page.
+- The names in the Report page's list are readable in the dark theme (plain text colour, underlined).
+
 ## Version 0.9.3 (2026-10-26)
 
 - **Report names on the sheet pages:** every plot and table picture, and the data table, now carries the name it has in the report

@@ -360,8 +360,13 @@ class Server(unittest.TestCase):
             self.assertEqual(opts["years"]["kind"], "select")
             self.assertEqual(opts["year_from"]["show_if"], ["years", "custom"])
             dt = next(s for s in sh["sheets"] if s["name"] == "Document_Types")     # the report's names are shown with every plot and table
-            self.assertEqual(dt["plots"][0]["files"][0]["report"], {"kind": "fig", "title": "Share of the document types", "stem": "fig_document_types_pie"})
+            ref = dt["plots"][0]["files"][0]["report"]
+            self.assertEqual((ref["kind"], ref["title"], ref["stem"]), ("fig", "Share of the document types", "fig_document_types_pie"))
             self.assertEqual(dt["csvs"][0]["report"]["stem"], "tab_Document_Types")
+            self.assertFalse(json.loads(call("/api/report/tick", {"stem": "tab_Document_Types", "on": False})[1])["selected"])   # the tick box on a sheet page
+            dt = next(s for s in json.loads(call("/api/sheets")[1])["sheets"] if s["name"] == "Document_Types")
+            self.assertFalse(dt["csvs"][0]["report"]["selected"])
+            self.assertTrue(json.loads(call("/api/report/tick", {"stem": "tab_Document_Types", "on": True})[1])["selected"])
             # a file the user chooses for a sheet (the Scopus Source List): the sample project brings a made-up one; wrong types are refused
             sa = next(s for s in sh["sheets"] if s["name"] == "Subject_Areas")
             self.assertEqual(sa["input"]["file"], "sample_source_list.csv")

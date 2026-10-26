@@ -105,6 +105,20 @@ def state(pr):
                          "tokens_out": len(todo) * TOKENS_OUT}}
 
 
+def selected(pr):
+    """the stems of the ticked figures and tables (before the first choice: everything that exists and was not deleted)"""
+    chosen = options(pr).get("items")
+    return set(chosen) if chosen is not None else {it["stem"] for it in state(pr)["items"] if it["selected"]}
+
+
+def tick(pr, stem, on):
+    """tick or untick one figure or table (from its sheet page); the order stays the order of the menu"""
+    sel = selected(pr)
+    sel = sel | {stem} if on else sel - {stem}
+    save_options(pr, {"items": [it["stem"] for it in catalog(pr) if it["stem"] in sel]})
+    return stem in sel
+
+
 def save_options(pr, body):
     o = options(pr)
     if "items" in body:

@@ -377,7 +377,8 @@ function renderSheet(name) {
   const tables = s.csvs.filter((c) => c.exists && c.picture);             // the table pictures are shown with the plots
   $("sh-plots-title").classList.toggle("hidden", !s.plots.some((pl) => pl.files.some((f) => f.exists)) && !tables.length);
   $("sh-plots-title").textContent = s.plots.length ? "Plots and tables" : "Tables";
-  const refName = (r) => r ? '<div class="ref">' + (r.kind === "fig" ? "Figure: " : "Table: ") + esc(r.title) + ' <span class="stem">(report file ' + esc(r.stem) + ".tex)</span></div>" : "";
+  const refName = (r) => r ? '<label class="ref"><input type="checkbox" data-rp="' + esc(r.stem) + '"' + (r.selected ? " checked" : "") + ' title="Tick to put this in the report"> ' +
+    (r.kind === "fig" ? "Figure: " : "Table: ") + esc(r.title) + ' <span class="stem">(report file ' + esc(r.stem) + ".tex)</span></label>" : "";
   $("sh-plots").innerHTML = '<div class="plots">' + s.plots.map((pl) => pl.files.filter((f) => f.exists).map((f) =>
     '<div class="plot">' + refName(f.report) + '<img src="/files/' + esc(name) + "/" + esc(f.name) + ".png" + stamp + '" alt="' + esc(pl.title) + '"><div class="caption">' + esc(pl.title) +
     ' &nbsp; <a href="/files/' + esc(name) + "/" + esc(f.name) + '.png?download=1">PNG</a><a href="/files/' + esc(name) + "/" + esc(f.name) + '.svg?download=1">SVG</a>' +
@@ -385,6 +386,7 @@ function renderSheet(name) {
     tables.map((c) => { const t = c.file.replace(/\.csv$/, "") + "_table";
       return '<div class="plot">' + refName(c.report) + '<img src="/files/' + esc(name) + "/" + esc(t) + ".png" + stamp + '" alt="Table ' + esc(c.file) + '"><div class="caption">Table: ' + esc(c.file.replace(/\.csv$/, "")) +
         ' &nbsp; <a href="/files/' + esc(name) + "/" + esc(t) + '.png?download=1">PNG</a><a href="/files/' + esc(name) + "/" + esc(t) + '.svg?download=1">SVG</a></div></div>'; }).join("") + "</div>";
+  bindTicks();
   $("sh-explain").classList.toggle("hidden", !s.explain);
   $("sh-explain").innerHTML = s.explain || "";
   const first = s.csvs[0];
@@ -430,11 +432,21 @@ function renderInput(name, inp) {
     setMsg("sh-input-msg", r.message, r.ok ? "ok" : "bad");
   };
 }
+// a tick box above every plot and table: put it in the report or leave it out (the same choice as on the Report page)
+function bindTicks() {
+  document.querySelectorAll("[data-rp]").forEach((box) => box.onchange = async () => {
+    const r = await api("/api/report/tick", { stem: box.dataset.rp, on: box.checked });
+    document.querySelectorAll('[data-rp="' + box.dataset.rp + '"]').forEach((b) => b.checked = r.selected);
+    for (const sh of sheetsInfo.sheets) for (const x of sh.plots.flatMap((pl) => pl.files).concat(sh.csvs)) if (x.report && x.report.stem === box.dataset.rp) x.report.selected = r.selected;
+  });
+}
 async function loadTable(name) {
   const t = await api("/api/sheet/table?name=" + encodeURIComponent(name) + "&csv=" + encodeURIComponent(curCsv) + "&page=" + curPage + "&size=50");
   document.querySelectorAll("#sh-csvs .tabbtn").forEach((b) => b.classList.toggle("active", b.dataset.csv === curCsv));
   const c = ((spec(name) || {}).csvs || []).find((x) => x.file === curCsv), stem = curCsv.replace(/\.csv$/, "") + "_table";
-  $("sh-tablepic").innerHTML = (c && c.report ? '<div class="ref">Table: ' + esc(c.report.title) + ' <span class="stem">(report file ' + esc(c.report.stem) + ".tex)</span></div> " : "") + (c && c.picture ? 'Download the table as a picture: <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.png?download=1">PNG</a> <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.svg?download=1">SVG</a>' : "");
+  $("sh-tablepic").innerHTML = (c && c.report ? '<label class="ref"><input type="checkbox" data-rp="' + esc(c.report.stem) + '"' + (c.report.selected ? " checked" : "") + ' title="Tick to put this in the report"> Table: ' +
+    esc(c.report.title) + ' <span class="stem">(report file ' + esc(c.report.stem) + ".tex)</span></label> " : "") + (c && c.picture ? 'Download the table as a picture: <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.png?download=1">PNG</a> <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.svg?download=1">SVG</a>' : "");
+  bindTicks();
   if (!t.exists) { $("sh-table").innerHTML = ""; return; }
   $("sh-total").textContent = "(" + t.total + " rows, " + t.columns.length + " columns)";
   $("sh-table").innerHTML = "<thead><tr>" + t.columns.map((x) => "<th>" + esc(x) + "</th>").join("") + "</tr></thead><tbody>" +

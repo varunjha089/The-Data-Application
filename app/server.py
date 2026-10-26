@@ -153,7 +153,9 @@ class App:
 
     def sheets_info(self, pr):
         out = []
-        names = {(it["sheet"], it["file"]): {"kind": it["kind"], "title": it["title"], "stem": it["stem"]} for it in report.catalog(pr)}   # the report's name of every plot and table
+        ticked = report.selected(pr)
+        names = {(it["sheet"], it["file"]): {"kind": it["kind"], "title": it["title"], "stem": it["stem"], "selected": it["stem"] in ticked}
+                 for it in report.catalog(pr)}                   # the report's name of every plot and table, and whether it is ticked for the report
         for spec in sheetlist.SHEETS:
             st = pipeline.sheet_state(pr, spec["name"])
             csvs = []
@@ -547,6 +549,8 @@ def make_handler(app):
             if p == "/api/report/options":
                 report.save_options(pr, body)
                 return self._send(200, report.state(pr))
+            if p == "/api/report/tick":                              # the tick box above a plot or table on its sheet page
+                return self._send(200, {"selected": report.tick(pr, str(body.get("stem", "")), bool(body.get("on")))})
             if p in ("/api/report/template", "/api/report/default"):
                 if app.busy():
                     return self._send(200, {"ok": False, "message": "A task is still running: wait until it has finished."})
