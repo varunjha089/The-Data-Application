@@ -153,15 +153,16 @@ class App:
 
     def sheets_info(self, pr):
         out = []
+        names = {(it["sheet"], it["file"]): {"kind": it["kind"], "title": it["title"], "stem": it["stem"]} for it in report.catalog(pr)}   # the report's name of every plot and table
         for spec in sheetlist.SHEETS:
             st = pipeline.sheet_state(pr, spec["name"])
             csvs = []
             for c in spec["csvs"]:
                 p = pipeline.sheet_csv(pr, spec["name"], c)
                 pic = p.with_name(p.stem + "_table.png")
-                csvs.append({"file": c, "exists": p.exists(), "rows": self.csv_rows(p) if p.exists() else 0,
+                csvs.append({"file": c, "exists": p.exists(), "rows": self.csv_rows(p) if p.exists() else 0, "report": names.get((spec["name"], c)),
                              "picture": pic.exists() and p.exists() and pic.stat().st_mtime >= p.stat().st_mtime - 5})
-            plots = [{"id": p["id"], "title": p["title"], "files": [self.plot_file(pr, spec["name"], f) for f in p["files"]]} for p in spec["plots"]]
+            plots = [{"id": p["id"], "title": p["title"], "files": [{**self.plot_file(pr, spec["name"], f), "report": names.get((spec["name"], f))} for f in p["files"]]} for p in spec["plots"]]
             out.append({**{k: spec[k] for k in ("name", "group", "title", "what", "needs")}, **st, "csvs": csvs, "plots": plots,
                         "log": (pr.dir / spec["name"] / f"{spec['name']}_log.txt").exists(),
                         "explain": spec["explain"], "downloads": [{**d, "exists": (pr.dir / spec["name"] / d["file"]).exists()} for d in spec["downloads"]], "options": [{**o, "value": sheetlist.option_values(pr, spec["name"])[o["id"]]} for o in spec["options"]],

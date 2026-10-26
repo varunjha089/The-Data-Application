@@ -377,12 +377,13 @@ function renderSheet(name) {
   const tables = s.csvs.filter((c) => c.exists && c.picture);             // the table pictures are shown with the plots
   $("sh-plots-title").classList.toggle("hidden", !s.plots.some((pl) => pl.files.some((f) => f.exists)) && !tables.length);
   $("sh-plots-title").textContent = s.plots.length ? "Plots and tables" : "Tables";
+  const refName = (r) => r ? '<div class="ref">' + (r.kind === "fig" ? "Figure: " : "Table: ") + esc(r.title) + ' <span class="stem">(report file ' + esc(r.stem) + ".tex)</span></div>" : "";
   $("sh-plots").innerHTML = '<div class="plots">' + s.plots.map((pl) => pl.files.filter((f) => f.exists).map((f) =>
-    '<div class="plot"><img src="/files/' + esc(name) + "/" + esc(f.name) + ".png" + stamp + '" alt="' + esc(pl.title) + '"><div class="caption">' + esc(pl.title) +
+    '<div class="plot">' + refName(f.report) + '<img src="/files/' + esc(name) + "/" + esc(f.name) + ".png" + stamp + '" alt="' + esc(pl.title) + '"><div class="caption">' + esc(pl.title) +
     ' &nbsp; <a href="/files/' + esc(name) + "/" + esc(f.name) + '.png?download=1">PNG</a><a href="/files/' + esc(name) + "/" + esc(f.name) + '.svg?download=1">SVG</a>' +
     (f.extra || []).map((x) => '<a href="/files/' + esc(name) + "/" + esc(f.name) + "." + x + '?download=1">' + (x === "tif" ? "TIFF" : x.toUpperCase()) + "</a>").join("") + "</div></div>").join("")).join("") +
     tables.map((c) => { const t = c.file.replace(/\.csv$/, "") + "_table";
-      return '<div class="plot"><img src="/files/' + esc(name) + "/" + esc(t) + ".png" + stamp + '" alt="Table ' + esc(c.file) + '"><div class="caption">Table: ' + esc(c.file.replace(/\.csv$/, "")) +
+      return '<div class="plot">' + refName(c.report) + '<img src="/files/' + esc(name) + "/" + esc(t) + ".png" + stamp + '" alt="Table ' + esc(c.file) + '"><div class="caption">Table: ' + esc(c.file.replace(/\.csv$/, "")) +
         ' &nbsp; <a href="/files/' + esc(name) + "/" + esc(t) + '.png?download=1">PNG</a><a href="/files/' + esc(name) + "/" + esc(t) + '.svg?download=1">SVG</a></div></div>'; }).join("") + "</div>";
   $("sh-explain").classList.toggle("hidden", !s.explain);
   $("sh-explain").innerHTML = s.explain || "";
@@ -433,7 +434,7 @@ async function loadTable(name) {
   const t = await api("/api/sheet/table?name=" + encodeURIComponent(name) + "&csv=" + encodeURIComponent(curCsv) + "&page=" + curPage + "&size=50");
   document.querySelectorAll("#sh-csvs .tabbtn").forEach((b) => b.classList.toggle("active", b.dataset.csv === curCsv));
   const c = ((spec(name) || {}).csvs || []).find((x) => x.file === curCsv), stem = curCsv.replace(/\.csv$/, "") + "_table";
-  $("sh-tablepic").innerHTML = c && c.picture ? 'Download the table as a picture: <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.png?download=1">PNG</a> <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.svg?download=1">SVG</a>' : "";
+  $("sh-tablepic").innerHTML = (c && c.report ? '<div class="ref">Table: ' + esc(c.report.title) + ' <span class="stem">(report file ' + esc(c.report.stem) + ".tex)</span></div> " : "") + (c && c.picture ? 'Download the table as a picture: <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.png?download=1">PNG</a> <a class="button" href="/files/' + esc(name) + "/" + esc(stem) + '.svg?download=1">SVG</a>' : "");
   if (!t.exists) { $("sh-table").innerHTML = ""; return; }
   $("sh-total").textContent = "(" + t.total + " rows, " + t.columns.length + " columns)";
   $("sh-table").innerHTML = "<thead><tr>" + t.columns.map((x) => "<th>" + esc(x) + "</th>").join("") + "</tr></thead><tbody>" +
@@ -525,11 +526,12 @@ async function renderReport() {
     html += '<tr><td colspan="4"><b>' + esc(g) + "</b></td></tr>" + rows.map((it) => {
       const note = it.failed ? '<span style="color: var(--bad)">failed: ' + esc(it.failed) + "</span>" : esc(it.note) + (it.check.length ? ' &mdash; <span style="color: var(--warn)">numbers to check: ' + esc(it.check.join(", ")) + "</span>" : "");
       return '<tr' + (it.exists ? "" : ' class="info"') + '><td><input type="checkbox" data-stem="' + esc(it.stem) + '"' + (it.selected ? " checked" : "") + (it.exists ? "" : " disabled") + "></td><td>" +
-        (it.kind === "fig" ? "Figure: " : "Table: ") + esc(it.title) + "</td><td>" + esc(it.sheet_title) + "</td><td>" + note + "</td></tr>";
+        '<a href="#sheet:' + esc(it.sheet) + '" data-go="' + esc(it.sheet) + '" title="Open the sheet with this ' + (it.kind === "fig" ? "plot" : "table") + '">' + (it.kind === "fig" ? "Figure: " : "Table: ") + esc(it.title) + "</a></td><td>" + esc(it.sheet_title) + "</td><td>" + note + "</td></tr>";
     }).join("");
   }
   $("rp-items").innerHTML = html + "</tbody>";
   document.querySelectorAll("#rp-items [data-stem]").forEach((c) => c.onchange = () => saveItems());
+  document.querySelectorAll("#rp-items [data-go]").forEach((a) => a.onclick = (e) => { e.preventDefault(); selectPage("sheet:" + a.dataset.go); });
 }
 async function saveItems(list) {
   const items = list || Array.from(document.querySelectorAll("#rp-items [data-stem]")).filter((c) => c.checked).map((c) => c.dataset.stem);

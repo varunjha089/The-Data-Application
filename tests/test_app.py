@@ -359,6 +359,9 @@ class Server(unittest.TestCase):
             opts = {o["id"]: o for o in next(s for s in sh["sheets"] if s["name"] == "04_Avg_Citations")["options"]}
             self.assertEqual(opts["years"]["kind"], "select")
             self.assertEqual(opts["year_from"]["show_if"], ["years", "custom"])
+            dt = next(s for s in sh["sheets"] if s["name"] == "Document_Types")     # the report's names are shown with every plot and table
+            self.assertEqual(dt["plots"][0]["files"][0]["report"], {"kind": "fig", "title": "Share of the document types", "stem": "fig_document_types_pie"})
+            self.assertEqual(dt["csvs"][0]["report"]["stem"], "tab_Document_Types")
             # a file the user chooses for a sheet (the Scopus Source List): the sample project brings a made-up one; wrong types are refused
             sa = next(s for s in sh["sheets"] if s["name"] == "Subject_Areas")
             self.assertEqual(sa["input"]["file"], "sample_source_list.csv")

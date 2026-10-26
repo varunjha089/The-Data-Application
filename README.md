@@ -282,6 +282,12 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
 
+## Version 0.9.3 (2026-10-26)
+
+- **Report names on the sheet pages:** every plot and table picture, and the data table, now carries the name it has in the report
+  (for example *Figure: Share of the document types*, report file `fig_document_types_pie.tex`), so the page, the Report list and the
+  LaTeX files are easy to match. On the Report page, a figure's or table's name opens its sheet.
+
 ## Version 0.9.2 (2026-10-25)
 
 - **Publisher treemaps:** the panel titles are one line again; the number of papers without a source title (not drawn) is printed in the
