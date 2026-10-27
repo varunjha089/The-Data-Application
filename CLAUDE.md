@@ -90,6 +90,10 @@ future/                   finished code taken out of the menu (kept for later)
   A script that makes one plot per call goes in `_PER_PLOT` (it gets `--only ID`); extra tables in `_EXTRA_CSV`; downloads in `_DOWNLOADS`; an explanation in `_EXPLAIN`.
 - **A choice on a sheet page**: an entry in `_OPTIONS` (kinds `number`, `check`, `select`; `"for": "plot"` sends it to the plot script only; `show_if` hides it until
   another choice has a value). It is saved in `project.json` and passed as arguments, so the script stays runnable by hand.
+  Options without `"for"` go to the DATA script only, so a script without choices needs `argparse` added (copy the block of `Author_Radial.py`; keep the
+  defaults equal to the old behaviour). Rankings end with a sort key on the name (`sort_values(keys + ["Author"], ascending=[..., True], kind="stable")`)
+  so ties come out the same on every run. When a sheet's columns or their order change, also change its `cols` in `steps/report/about.json` and the
+  copy of the script in the owner's Workbook_Sheets (see CLAUDE.local.md), and check the new order in `test_everything`.
 - **A file of the user's that a sheet reads** (like the Scopus Source List of `Subject_Areas`): an entry in `_INPUTS` (folder in the project, script
   argument, accepted types, label, help, link). The page shows which file is in use and a button to choose one (`POST /api/sheet/input`: copied into
   `<project>/<folder>/`, earlier files stay, the newest is used); `run_sheet` passes it as the argument. Without it the script prints SKIPPED and writes no
@@ -105,6 +109,8 @@ future/                   finished code taken out of the menu (kept for later)
 - **A new kind of step** (like the cleaning): a function in `pipeline.py`, a job in `server.py`, a page in `index.html` / `app.js`.
 - **A plot or table in the report**: an entry `plot:<file>` / `table:<csv>` in `steps/report/about.json` (title, paragraph 1 = what it is, why it
   matters, its limitation; for a table optionally cols, n, rename, query, spec). Plots without an entry still appear (title + the sheet's description).
+  `about` is inserted as raw LaTeX (math in `$...$`; an underscore is `\\_` in the JSON), while titles, headers and cells go through `esc()`;
+  `cols` sets the table's columns and their order, `n` its rows (default 15; the sheet's own number of rows wins).
 - **AI calls**: only from `steps/report/make_report.py` (plain urllib, no SDK: the app is standard library only and supports two providers). The key
   travels only in the environment variable TDA_AI_KEY; never in arguments, logs, run_info.json or project.json (a test checks every file of Report/).
   Anthropic: `anthropic-version: 2026-10-21` (no temperature/top_p/top_k), `output_config.format` json_schema, server-side fallbacks for the models in
@@ -120,6 +126,9 @@ future/                   finished code taken out of the menu (kept for later)
 python -m unittest discover -s tests -v              # with a Python that has pandas, numpy, matplotlib (for example the shared venv): about 5 minutes
 TDA_QUICK=1 python3 -m unittest discover -s tests    # only the fast tests (standard library)
 ```
+
+Order that saves time: quick tests first (seconds), then the full run in the background (about 5 minutes) while the README version section is written;
+publish only after it passes. `test_everything` builds the sample project once and checks every sheet: add a new check there rather than a new full run.
 
 Tests and trials never touch the user's real settings or projects: set `THE_DATA_APP_HOME=<scratch>/appdata` and `PYTHONDONTWRITEBYTECODE=1`, and make projects
 with `--location <scratch>` (the sample project is ideal: `python3 the_data_app.py sample --location <scratch>`). Never hand the user a window started from a scratch copy.
