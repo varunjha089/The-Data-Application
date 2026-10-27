@@ -1,4 +1,4 @@
-"""Plot of the sheet "16_Author_Impact": the 20 authors with the highest h-index
+"""Plot of the sheet "16_Author_Impact": the h-index of the authors of the table, in the order of the table (by h-index or by documents, see the sheet)
 Input : 16_Author_Impact.csv in this folder (run 16_Author_Impact.py first)        Output: author_h_index (.png and .svg, same folder)
 Run   : python3 16_Author_Impact_plot.py   (needs matplotlib)
 """
@@ -38,5 +38,5 @@ for i, (h, n, tc) in enumerate(zip(t["h_index"], t["NP"], t["TC"])):
     ax.text(h + 0.08, i, f"{n} papers, {tc} citations", va="center", fontsize=9)
 ax.set_xlabel("h-index (computed on this data set)")
 ax.set_xlim(0, t["h_index"].max() * 1.6)
-ax.set_title("Authors' local impact (top 20 by h-index)")
+ax.set_title(f"Authors' local impact: h-index of the {len(t)} authors of the table")
 save(fig, "author_h_index")

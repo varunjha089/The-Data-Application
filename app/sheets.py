@@ -48,7 +48,7 @@ _ROWS = [
     ("14_Author_Over_Time", "Authors", "Authors over time", "Papers per year of the ten most productive authors.", ["Authors", "Author_Summary"], [("authors_over_time", "Authors over time: heat map", ["authors_over_time"]),
       ("authors_timeline", "Authors over time: timeline (bubbles)", ["authors_timeline"])]),
     ("15_Lotka", "Authors", "Lotka's law", "How many authors wrote 1, 2, 3 ... papers.", ["Author_Summary"], [("lotka", "Lotka's law", ["lotka"])]),
-    ("16_Author_Impact", "Authors", "Author impact", "The 20 authors with the highest h-index.", ["Author_Summary"], [("author_h_index", "Authors by h-index", ["author_h_index"])]),
+    ("16_Author_Impact", "Authors", "Author impact", "The leading authors with their h-, g- and m-index, citations (TC), documents (NP) and first year (PY_start), ranked by h-index or by number of documents: see Your choices.", ["Author_Summary"], [("author_h_index", "Authors by h-index", ["author_h_index"])]),
     ("Author_Radial", "Authors", "Authors: radial chart", "The leading authors ranked by fractional score (each paper counts 1, shared by its authors) or by publications, with the country they publish from (read from the addresses of their papers), as a radial bar chart: one bar per author, the length is the fractional score, the colour the country.", ["Author_Summary"],
      [("author_radial", "Radial chart of the leading authors", ["author_radial"])]),
     ("Institution_Bursts", "Affiliations", "Institution bursts", "The institutions with the strongest bursts of publication (CiteSpace-style burst history): table, plot and HTML page.", ["Affiliations"],
@@ -140,6 +140,10 @@ _OPTIONS["Author_Radial"] = [
     {"id": "rank_by", "label": "Rank the authors by", "kind": "select", "choices": [("frac", "Fractional score"), ("papers", "Number of publications")], "default": "frac", "arg": "--rank-by"},
     {"id": "background", "label": "Background of the chart", "kind": "select", "choices": [("dark", "Dark"), ("light", "Light (for print)")], "default": "dark", "arg": "--background", "for": "plot"},
     {"id": "colours", "label": "Countries with their own colour (the others are grey)", "kind": "number", "default": 12, "min": 1, "max": 12, "arg": "--colours", "for": "plot"}]
+_OPTIONS["16_Author_Impact"] = [
+    {"id": "top", "label": "Number of authors", "kind": "number", "default": 20, "min": 1, "max": 200, "arg": "--top"},
+    {"id": "rank_by", "label": "Rank the authors by", "kind": "select", "choices": [("h", "h-index (then citations)"), ("papers", "Number of documents (then h-index)")],
+     "default": "h", "arg": "--rank-by"}]
 _OPTIONS["17_Top_Affiliations"] = [{"id": "by", "label": "Count papers by", "kind": "select", "choices": [("institution", "Institution (each institute on its own)"),
                                     ("parent", "Parent organisation (e.g. the institutes of the Chinese Academy of Sciences together)")], "default": "institution", "arg": "--by"}]
 

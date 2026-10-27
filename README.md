@@ -99,7 +99,7 @@ Choosing a new file makes the earlier cleaned data "out of date" until you clean
 | Main information | Main information (plot: documents by type), Document types, Languages and Open access (pies), Subject areas (pie and bar chart; needs the Scopus Source List) |
 | Production | Annual production (2 plots: with total citations, and with a log trend line), Average citations per year, Life cycle (plots) |
 | Sources | Top sources (plot), Documents per source, Bradford's law (plot), Publishers (treemaps of the largest publishers' sources), Bradford core: who publishes there (3 plots per kind: countries, authors, institutions; the first is a population pyramid, core papers left and other papers right), Source impact (plot), Sources over time (plot) |
-| Authors | Authors over time (plot), Lotka's law (plot), Author impact (plot), Authors: radial chart (plot: one bar per author, length = fractional score, colour = country) |
+| Authors | Authors over time (plot), Lotka's law (plot), Author impact (table of the leading authors with h-, g-, m-index, TC, NP, PY_start, ranked by h-index or by documents; plot), Authors: radial chart (plot: one bar per author, length = fractional score, colour = country) |
 | Affiliations | Top affiliations (plot), Affiliations over time (plot) |
 | Countries | Corresponding authors' countries (plot), Countries' production and citations (2 plots), Country collaboration pairs (plot), Country collaboration chord (chord diagram) |
 | Documents | Word cloud of the keywords (plot), Most cited documents (plot) |
@@ -282,6 +282,13 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   `topic_slices.json` in the project folder (written with automatic choices on the first run; format at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`;
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
+
+## Version 0.10.4 (2026-10-27)
+
+- **Author impact: the "Top 10 authors" table of published studies.** The table now has the columns Author, h_index, g_index,
+  m_index, TC, NP, PY_start (in that order) and two choices on its page: how many authors (default 20) and whether to rank them by
+  **h-index** (then citations; Biblioshiny's "Authors' Local Impact") or by **number of documents** (then h-index). Equal authors are
+  ordered by name. Its report text explains the three indices.
 
 ## Version 0.10.3 (2026-10-26)
 

@@ -631,6 +631,20 @@ class FullRun(unittest.TestCase):
         self.assertEqual(len(radial), 50)
         self.assertGreater(sum(r["Country"] != "Unknown" for r in radial), 40)
         self.assertEqual([float(r["Fractional score"]) for r in radial], sorted((float(r["Fractional score"]) for r in radial), reverse=True))
+        impact = pr.dir / "16_Author_Impact" / "16_Author_Impact.csv"         # leading authors: by h-index (default) or by documents, columns as in published tables
+        with open(impact, encoding="utf-8-sig") as f:
+            rows = list(csv.DictReader(f))
+        self.assertEqual(list(rows[0]), ["Author", "Author ID", "h_index", "g_index", "m_index", "TC", "NP", "PY_start"])
+        self.assertEqual(len(rows), 20)
+        self.assertEqual([int(r["h_index"]) for r in rows], sorted((int(r["h_index"]) for r in rows), reverse=True))
+        subprocess.run([sys.executable, str(pr.dir / "16_Author_Impact" / "16_Author_Impact.py"), "--top", "10", "--rank-by", "papers"],
+                       check=True, capture_output=True)
+        with open(impact, encoding="utf-8-sig") as f:
+            rows = list(csv.DictReader(f))
+        self.assertEqual(len(rows), 10)
+        self.assertEqual([int(r["NP"]) for r in rows], sorted((int(r["NP"]) for r in rows), reverse=True))
+        self.assertEqual([o["id"] for o in sheets.BY_NAME["16_Author_Impact"]["options"]], ["top", "rank_by"])
+        subprocess.run([sys.executable, str(pr.dir / "16_Author_Impact" / "16_Author_Impact.py")], check=True, capture_output=True)
         self.check_report(pr, log)
         long_decimals = []                                          # every number in a sheet's tables has at most 2 decimal places
         for spec in sheets.SHEETS:
