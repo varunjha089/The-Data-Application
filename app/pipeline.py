@@ -262,11 +262,11 @@ def run_sheet(project, name, log, _chain=()):
             if not ok:
                 return False, f"{need} could not be generated: {msg}"
     args = sheetlist.option_args(project, name) if sheetlist.has_data_options(name) else []
-    if name == "References":
+    if name in ("References", "VOSviewer_Prep"):                     # these read the export itself (VOSviewer reads that file, not the cleaned data)
         raw = project.main_data()
         if raw is None:
             return False, "No main data chosen yet (Settings)."
-        args = ["--raw", raw]
+        args = (args if name != "References" else []) + ["--raw", raw]
     chosen = sheetlist.input_file(project, name)
     if chosen is not None:
         args += [spec["input"]["arg"], chosen]

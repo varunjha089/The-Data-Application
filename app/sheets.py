@@ -76,6 +76,7 @@ _ROWS = [
     ("Word_Cloud", "Documents", "Word cloud of the keywords", "How many papers use each keyword, drawn as a word cloud (a word's size follows its number of papers). Spelling variants are merged: plurals, and abbreviations in brackets with their full name (\"rag\" and \"retrieval augmented generation (rag)\" count as \"retrieval augmented generation\"); the table lists what was merged. Leave out the words of your search below: they are in nearly every paper and would fill the picture.", [],
      [("word_cloud", "Word cloud of the keywords", ["word_cloud"])]),
     ("23_Top_Cited", "Documents", "Most cited documents", "The 20 most cited documents.", [], [("top_cited", "Most cited documents", ["top_cited"])]),
+    ("VOSviewer_Prep", "VOSviewer", "VOSviewer preparation", "Prepares the VOSviewer maps of this export: the folder VOS in the project, with one folder per map (countries, organizations, authors, keywords, title and abstract terms, citation, co-citation and coupling) and, in each, a STEPS.md with every click and thresholds worked out from this data, and the thesaurus that map needs. Your own edits in VOS are never overwritten.", [], []),
 ]
 # options the user is asked for (saved in the project; the sheet's data script gets them as arguments): id, label, kind, default, limits, argument
 _OPTIONS = {"11_Sources_Over_Time": [
@@ -140,6 +141,9 @@ _OPTIONS["Author_Radial"] = [
     {"id": "rank_by", "label": "Rank the authors by", "kind": "select", "choices": [("frac", "Fractional score"), ("papers", "Number of publications")], "default": "frac", "arg": "--rank-by"},
     {"id": "background", "label": "Background of the chart", "kind": "select", "choices": [("dark", "Dark"), ("light", "Light (for print)")], "default": "dark", "arg": "--background", "for": "plot"},
     {"id": "colours", "label": "Countries with their own colour (the others are grey)", "kind": "number", "default": 12, "min": 1, "max": 12, "arg": "--colours", "for": "plot"}]
+_OPTIONS["VOSviewer_Prep"] = [
+    {"id": "org_level", "label": "Organizations in the thesaurus", "kind": "select", "choices": [("institution", "Institutions (departments joined into their university)"),
+     ("parent", "Parent organisations (also the institutes of CAS, CNRS, CSIC, CNR, ... joined)")], "default": "institution", "arg": "--org-level"}]
 _OPTIONS["16_Author_Impact"] = [
     {"id": "top", "label": "Number of authors", "kind": "number", "default": 20, "min": 1, "max": 200, "arg": "--top"},
     {"id": "rank_by", "label": "Rank the authors by", "kind": "select", "choices": [("h", "h-index (then citations)"), ("papers", "Number of documents (then h-index)")],
@@ -162,7 +166,17 @@ _EXPLAIN = {"09_Bradford": """<h3>How the core sources are calculated</h3>
 <li><b>The numbered box (top left).</b> It lists the sources of the core zone, in rank order: number 1 is the most productive source, number 2 the next, and so on up to the last source of Zone 1. The same numbers stand next to the blue dots on the curve, so a dot can be matched to its source name. The box therefore has as many lines as the core has sources, whatever the data. Long journal names are shortened to fit (the country in brackets is dropped, known long titles get their usual abbreviation); the table always has the full name.</li>
 <li><b>Empirical cumulative curve (black line).</b> The real data: for every rank, the documents of that source and of all more productive sources added up. It rises steeply at first (the core gives many documents with few sources) and then more and more slowly.</li>
 <li><b>C(r) = a + b ln(r), R&sup2; (red dashed line).</b> The straight line that fits the curve best when rank is on the logarithmic axis (least squares). <i>C(r)</i> is the cumulative number of documents at rank <i>r</i>; <i>b</i> (the slope) is the number of documents added each time the rank is multiplied by e (about 2.72) and <i>a</i> (the intercept) is where the line cuts the vertical axis at ln(r) = 0. <i>R&sup2;</i> says how well the line fits, from 0 (not at all) to 1 (perfectly): the closer to 1, the better the data follow Bradford's law. The title above the plot repeats k, R&sup2;, the number of sources and the number of documents used.</li>
-</ul>"""}
+</ul>""",
+            "VOSviewer_Prep": """<h3>How to use it</h3>
+<ol>
+<li>Press <b>Generate</b>. The folder <b>VOS</b> appears in the project folder (next to the sheet folders); open <b>VOS/README.md</b>: one row per map,
+the suggested threshold and what to look out for in this data.</li>
+<li>For a map, open its folder and its <b>STEPS.md</b>, and follow it in VOSviewer (a free program: vosviewer.com). Load the thesaurus it names: it joins the
+spellings of one organization, keyword or journal.</li>
+<li>Save the picture and the map and network files into the same folder, as STEPS.md says, and write the numbers into its <i>Record</i> block.</li>
+</ol>
+<p>Generating again (for example after changing the choice above) rewrites only the files you did not change; your version stays, and the new one is written
+next to it as <i>name.new.ext</i>. The thesaurus files are tab-separated text: edit them with a text editor and keep the tab between the two columns.</p>"""}
 _PER_PLOT = {"10_Source_Impact", "Bradford_Core"}        # the plot script makes only the plot asked for (--only ID)
 _DOWNLOADS = {n: [{"file": f"{n}.html", "label": "Download the HTML page"}] for n in ("Country_Bursts", "Author_Bursts", "Institution_Bursts")}      # extra files a task page offers
 _EXTRA_CSV = {"Country_Bursts": ["Country_Bursts_yearly.csv"], "Author_Bursts": ["Author_Bursts_yearly.csv"], "Institution_Bursts": ["Institution_Bursts_yearly.csv"], "Country_Radar": ["Country_Radar_scaled.csv"], "18_Affil_Over_Time": ["18_Affil_Timeline.csv"], "11_Sources_Over_Time": ["11_Source_Timeline.csv"], "21_Countries_Over_Time": ["21_Country_Timeline.csv"], "Country_Collaboration": ["Country_Collaboration_chord.csv"], "14_Author_Over_Time": ["14_Author_Timeline.csv"], "05_Life_Cycle": ["05_Life_Cycle_parameters.csv"], "09_Bradford": ["09_Bradford_zones.csv"], "Topic_Slices": ["Topic_Slices_top_cited.csv", "Topic_Slices_keywords.csv", "Topic_Slices_top_references.csv", "Topic_Slices_term_trend.csv", "Topic_Slices_gap_audit.csv", "Topic_Slices_reference_audit.csv", "Topic_Slices_report.md"], "Bradford_Core": ["Bradford_Core_baseline.csv", "Bradford_Core_matrix.csv"], "15_Lotka": ["15_Lotka_parameters.csv"], "Subject_Areas": ["Subject_Areas_papers.csv"], "Publishers": ["Publishers_sources.csv"]}

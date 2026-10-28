@@ -644,6 +644,32 @@ class FullRun(unittest.TestCase):
         self.assertEqual(len(rows), 10)
         self.assertEqual([int(r["NP"]) for r in rows], sorted((int(r["NP"]) for r in rows), reverse=True))
         self.assertEqual([o["id"] for o in sheets.BY_NAME["16_Author_Impact"]["options"]], ["top", "rank_by"])
+        vos = pr.dir / "VOS"                                             # VOSviewer preparation: one folder per map, STEPS.md and thesauri
+        for folder in ("Co-Authorship_Countries", "Co-Authorship_Organizations", "Co-Authorship_Authors", "Co-Occurrence_Author_Keywords",
+                       "Text_Terms_Title_Abstract", "Citation_Documents_and_Sources", "Co-Citation_and_Bibliographic_Coupling"):
+            self.assertTrue((vos / folder / "STEPS.md").exists(), folder)
+        self.assertTrue((vos / "README.md").exists())
+        with open(pr.main_data(), encoding="utf-8-sig", newline="") as f:
+            affs = {a.strip() for r in csv.DictReader(f) for a in r["Affiliations"].split(";") if a.strip()}
+        with open(vos / "Co-Authorship_Organizations" / "thesaurus_organizations.txt", encoding="utf-8", newline="") as f:
+            th = list(csv.reader(f, delimiter="\t"))
+        self.assertEqual(th[0], ["label", "replace by"])
+        self.assertGreater(len(th), 1)
+        self.assertTrue(all(len(r) == 2 and r[1] and r[0] in affs for r in th[1:]))   # every label is a string of the export, never an empty target
+        steps = vos / "Co-Authorship_Countries" / "STEPS.md"
+        steps.write_text(steps.read_text(encoding="utf-8") + "my note\n", encoding="utf-8")   # the user's edit is kept, the new version goes next to it
+        ok, msg = pipeline.run_sheet(pr, "VOSviewer_Prep", log.append)
+        self.assertTrue(ok, msg)
+        self.assertTrue(steps.read_text(encoding="utf-8").endswith("my note\n"))
+        self.assertTrue((vos / "Co-Authorship_Countries" / "STEPS.new.md").exists())
+        sys.path.insert(0, str(pr.dir / "common"))                     # names in other scripts are never merged by the keyword thesaurus
+        src = (pr.dir / "VOSviewer_Prep" / "VOSviewer_Prep.py").read_text(encoding="utf-8").replace("\nmain()\n", "\n")
+        ns = {"__name__": "vprep", "__file__": str(pr.dir / "VOSviewer_Prep" / "VOSviewer_Prep.py")}
+        exec(compile(src, "VOSviewer_Prep.py", "exec"), ns)
+        pairs, _, _ = ns["keyword_thesaurus"]([{"Author Keywords": "多光譜; 冬小麥; Floods; flood; Synthetic Aperture Radar (SAR); SAR"}])
+        self.assertEqual(dict(pairs).get("多光譜"), None)
+        self.assertEqual(dict(pairs)["floods"], "flood")
+        self.assertIn(dict(pairs).get("synthetic aperture radar (sar)"), ("sar", "synthetic aperture radar"))
         subprocess.run([sys.executable, str(pr.dir / "16_Author_Impact" / "16_Author_Impact.py")], check=True, capture_output=True)
         self.check_report(pr, log)
         long_decimals = []                                          # every number in a sheet's tables has at most 2 decimal places

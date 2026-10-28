@@ -103,6 +103,7 @@ Choosing a new file makes the earlier cleaned data "out of date" until you clean
 | Affiliations | Top affiliations (plot), Affiliations over time (plot) |
 | Countries | Corresponding authors' countries (plot), Countries' production and citations (2 plots), Country collaboration pairs (plot), Country collaboration chord (chord diagram) |
 | Documents | Word cloud of the keywords (plot), Most cited documents (plot) |
+| VOSviewer | VOSviewer preparation (the folder VOS: one folder per VOSviewer map with its steps and thesaurus) |
 
 Each sheet is one Python file (`steps/sheets/<Sheet>/<Sheet>.py`) and each plot one more (`<Sheet>_plot.py`); the application copies the script into the project's folder `<Sheet>/` and runs it there with the project's Python,
 so the folder of a project also holds the scripts and results of every sheet. The scripts are readable on their own: a header says what the sheet is, the Excel method it follows, its input and its output.
@@ -253,6 +254,15 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   abbreviation in brackets with its full name ("retrieval augmented generation (rag)" also makes "rag" count as "retrieval augmented generation"); the table's
   column Variants lists what was merged (switch it off on the page). Choose how many keywords are drawn, and leave out the most used ones (the words of
   your search, which are in nearly every paper); they stay in the table and are named under the picture. Drawn without any extra package.
+- **VOSviewer preparation** (group VOSviewer): writes the folder `VOS` in the project, with one folder per VOSviewer map (co-authorship of
+  countries, organizations and authors; co-occurrence of author keywords; terms of titles and abstracts; citation; co-citation and bibliographic
+  coupling) and, in each, a `STEPS.md` with every click in VOSviewer, thresholds worked out from the data (for example "7 → 88 keywords") and the
+  numbers to expect, plus the thesaurus the map needs: organizations (departments joined into their institution, or into the parent organisation),
+  author keywords (spellings, plurals, "long form (acronym)"), cited journals (spellings, "(Switzerland)") and terms (long forms and acronyms as
+  the abstracts use them), with a list of terms to untick. It checks the export for problems VOSviewer has: Scopus subscript markup (`<inf>`, which
+  becomes the term "inf"; a copy without it is written), references in the newer Scopus style or cut to about ten per paper (the citation maps then
+  lose links; a test copy is written), papers with more than 25 authors. A file you change in `VOS` is never overwritten: the new version is
+  written next to it as `name.new.ext`.
 - **Log trend line** (Annual production): the documents per year as bars shaded from light yellow to dark red, with the exponential ln(documents) =
   a + b x year fitted by least squares, its R² and the growth per year (e^b - 1). Years without papers cannot be fitted; years after the last complete
   year are still being indexed, so they are drawn hatched and left out of the fit.
@@ -282,6 +292,14 @@ Working rules for developers are in `CLAUDE.md`; `python -m unittest discover -s
   `topic_slices.json` in the project folder (written with automatic choices on the first run; format at the top of `steps/sheets/Topic_Slices/Topic_Slices.py`;
   an example for the sample project in `steps/sheets/Topic_Slices/examples/`). Without Query_IDs (a single search) the sheet is skipped.
 - The code is a git repository (`git log`); only the application is under git, never projects or data.
+
+## Version 0.11.0 (2026-10-28)
+
+- **New: VOSviewer preparation** (new group VOSviewer). One click writes the folder `VOS` in the project: one folder per VOSviewer map, each with
+  step-by-step instructions written for this data (thresholds, the numbers to expect, what to look out for) and the thesaurus that map needs:
+  organizations, author keywords, cited journals and title/abstract terms. It also warns about Scopus subscript markup (`<inf>`, written as a clean
+  copy for VOSviewer), references in the newer Scopus style or cut to ten per paper, and very large author teams. Choice on the page: organizations
+  as institutions or as parent organisations. Files you edit in `VOS` are never overwritten.
 
 ## Version 0.10.4 (2026-10-27)
 

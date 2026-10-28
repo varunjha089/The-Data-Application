@@ -76,6 +76,9 @@ steps/01_clean_data.py    the cleaning (text hygiene, documented Power Query ste
 steps/common/             names.py (countries, institutions, parent organisations, country fallback), plotlook.py (plot-look wrapper),
                           table_image.py (a CSV as a PNG/SVG table picture); copied into <project>/common/
 steps/sheets/<Sheet>/     <Sheet>.py (data) and <Sheet>_plot.py (plots); a .json next to a script is copied with it
+steps/sheets/VOSviewer_Prep/  writes <project>/VOS/ (one folder per VOSviewer map: STEPS.md + thesaurus) from the EXPORT (--raw, as References), not
+                          from 01_Clean_Data: VOSviewer reads the export, so thesaurus labels must be its strings; VOS/.generated.json holds the hash of
+                          every file it wrote, and a file changed since is never overwritten (new version as <name>.new.<ext>)
 steps/report/             make_report.py (run in <project>/Report with the project's python: LaTeX per item, Anthropic Messages / Gemini generateContent
                           over urllib, JSON {analysis, conclusion}, number check), about.json (paragraph 1 of every plot/table: fixed, never asked
                           from a model), template/report.tex (the default report)
@@ -115,6 +118,10 @@ future/                   finished code taken out of the menu (kept for later)
   travels only in the environment variable TDA_AI_KEY; never in arguments, logs, run_info.json or project.json (a test checks every file of Report/).
   Anthropic: `anthropic-version: 2026-10-21` (no temperature/top_p/top_k), `output_config.format` json_schema, server-side fallbacks for the models in
   FALLBACK_MODELS. Tests use `THE_DATA_APP_ANTHROPIC_URL` (a local stand-in, `FakeAI`) and `THE_DATA_APP_KEYCHAIN` (a throw-away keychain file).
+- **VOSviewer files** (VOSviewer_Prep): a thesaurus is tab-separated CSV: write it with `csv.writer(delimiter="\t")` (a name with `"` must be quoted
+  and doubled, or VOSviewer stops with "Incorrect use of quotes"), never with an empty "replace by". New rules for a thesaurus are checked against a
+  real export: every label must occur in it, and a merge must never join different things (company suffixes, keywords in other scripts). The STEPS
+  texts follow VOSviewer 1.6.20's screens (text data: the thesaurus box is on the counting screen; bibliographic data: on the analysis screen).
 - Every feature: a test in `tests/test_app.py`, an entry in `README.md`.
 - **The updater** (`app/update.py`) is tested by running real updates in throw-away clones against a local stand-in for GitHub (`FakeGitHub` in the tests;
   `THE_DATA_APP_UPDATE_API` points the check at it). The update's own check runs the new version's quick tests with `THE_DATA_APP_UPDATING=1`, which makes
